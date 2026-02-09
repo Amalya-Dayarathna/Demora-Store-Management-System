@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Business {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  color       String   @default("#000000")
+  status      String   @default("active")
+  createdAt   DateTime @default(now())
+  
+  categories      Category[]
+  items           Item[]
+  variants        Variant[]
+  bills           Bill[]
+  capital         Capital[]
+  income          Income[]
+  expenses        Expense[]
+  stockMovements  StockMovement[]
+  giftBoxes       GiftBox[]
+  
+  @@map("businesses")
+}
+
+model Category {
+  id           String @id @default(cuid())
+  categoryName String
+  categoryCode String
+  businessId   String
+  
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  items    Item[]
+  
+  @@unique([categoryCode, businessId])
+  @@map("categories")
+}
+
+model Item {
+  id           String  @id @default(cuid())
+  itemName     String
+  categoryId   String
+  baseRefCode  String
+  costPrice    Float
+  costPriceCode String @default("DDD")
+  sellingPrice Float
+  stockQuantity Int    @default(0)
+  businessId   String
+  
+  business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  category       Category        @relation(fields: [categoryId], references: [id])
+  variants       Variant[]
+  billItems      BillItem[]
+  stockMovements StockMovement[]
+  giftBoxItems   GiftBoxItem[]
+  
+  @@map("items")
+}
+
+model Variant {
+  id            String @id @default(cuid())
+  itemId        String
+  variantCode   String @unique
+  attributes    Json   // {color: "Red", size: "M"}
+  stockQuantity Int    @default(0)
+  qrCodeValue   String
+  
+  business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  businessId     String
+  item           Item            @relation(fields: [itemId], references: [id])
+  billItems      BillItem[]
+  stockMovements StockMovement[]
+  
+  @@map("variants")
+}
+
+model Bill {
+  id              String   @id @default(cuid())
+  billNumber      String   @unique
+  subtotal        Float
+  codDelivery     Float    @default(0)
+  packagingCost   Float    @default(0)
+  grandTotal      Float
+  status          String   @default("Ordered") // Ordered, Packed, Dispatched, Delivered
+  paymentType     String   @default("COD") // COD, Bank Transfer
+  paymentStatus   String   @default("Pending") // Pending, Received
+  customerName    String?
+  customerPhone   String?
+  customerAddress String?
+  businessId      String
+  createdAt       DateTime @default(now())
+  
+  business  Business   @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  billItems BillItem[]
+  
+  @@map("bills")
+}
+
+model BillItem {
+  id        String  @id @default(cuid())
+  billId    String
+  variantId String?
+  itemId    String?
+  quantity  Int
+  unitPrice Float
+  total     Float
+  
+  bill    Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
+  variant Variant? @relation(fields: [variantId], references: [id])
+  item    Item?    @relation(fields: [itemId], references: [id])
+  
+  @@map("bill_items")
+}
+
+model Capital {
+  id         String   @id @default(cuid())
+  date       DateTime @default(now())
+  amount     Float
+  givenBy    String
+  settled    Float    @default(0)
+  type       String   @default("investment") // investment, settlement, salary, profit_distribution
+  description String?
+  businessId String
+  
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  
+  @@map("capital")
+}
+
+model Income {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  amount      Float
+  description String
+  source      String   @default("manual") // manual, billing
+  businessId  String
+  
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  
+  @@map("income")
+}
+
+model Expense {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  amount      Float
+  description String
+  category    String   // packaging, delivery, ads, supplies
+  businessId  String
+  
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  
+  @@map("expenses")
+}
+
+model StockMovement {
+  id          String   @id @default(cuid())
+  itemId      String?
+  variantId   String?
+  movementType String  // "IN" for stock added, "OUT" for stock deducted
+  quantity    Int
+  reason      String   // "initial", "restock", "bill", "adjustment"
+  reference   String?  // bill number or other reference
+  createdAt   DateTime @default(now())
+  businessId  String
+  
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  item     Item?    @relation(fields: [itemId], references: [id])
+  variant  Variant? @relation(fields: [variantId], references: [id])
+  
+  @@map("stock_movements")
+}
+
+model GiftBox {
+  id          String   @id @default(cuid())
+  name        String
+  giftBoxCode String   @unique
+  description String?
+  packingCost Float    @default(0)
+  totalCost   Float
+  sellingPrice Float   @default(0)
+  businessId  String
+  createdAt   DateTime @default(now())
+  
+  business    Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  items       GiftBoxItem[]
+  
+  @@map("gift_boxes")
+}
+
+model GiftBoxItem {
+  id        String @id @default(cuid())
+  giftBoxId String
+  itemId    String
+  quantity  Int
+  
+  giftBox GiftBox @relation(fields: [giftBoxId], references: [id], onDelete: Cascade)
+  item    Item    @relation(fields: [itemId], references: [id])
+  
+  @@map("gift_box_items")
+}
+
+model User {
+  id       String @id @default(cuid())
+  username String @unique
+  password String
+  role     String @default("admin")
+  
+  @@map("users")
+}
