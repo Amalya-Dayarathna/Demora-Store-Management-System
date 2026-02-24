@@ -26,7 +26,7 @@ const Layout = ({ children }) => {
     { text: 'Businesses', icon: <Business />, path: '/businesses' },
     { text: 'Categories', icon: <Category />, path: '/categories' },
     { text: 'Items', icon: <Inventory />, path: '/items' },
-    { text: 'Variants', icon: <QrCode />, path: '/variants' },
+    { text: 'Images', icon: <QrCode />, path: '/images' },
     { text: 'Gift Boxes', icon: <CardGiftcard />, path: '/gift-boxes' },
     { text: 'Stock History', icon: <History />, path: '/stock-history' },
     { text: 'Billing', icon: <Receipt />, path: '/billing' },

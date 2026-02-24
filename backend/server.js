@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
+const path = require('path');
 const { PrismaClient } = require('@prisma/client');
 
 const app = express();
@@ -9,6 +10,7 @@ const prisma = new PrismaClient();
 
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Auth middleware
 const authenticateToken = (req, res, next) => {
@@ -30,6 +32,7 @@ app.use('/api/businesses', authenticateToken, require('./routes/businesses'));
 app.use('/api/categories', authenticateToken, require('./routes/categories'));
 app.use('/api/items', authenticateToken, require('./routes/items'));
 app.use('/api/variants', authenticateToken, require('./routes/variants'));
+app.use('/api/images', authenticateToken, require('./routes/images'));
 app.use('/api/bills', authenticateToken, require('./routes/bills'));
 app.use('/api/cashflow', authenticateToken, require('./routes/cashflow'));
 app.use('/api/reports', authenticateToken, require('./routes/reports'));

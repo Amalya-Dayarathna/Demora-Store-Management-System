@@ -46,7 +46,26 @@ const Billing = () => {
         axios.get(`/api/variants/${selectedBusiness.id}`)
       ])
       setItems(itemsRes.data)
-      setVariants(variantsRes.data)
+      
+      // Create virtual variants from items with inline variants
+      const inlineVariants = []
+      itemsRes.data.forEach(item => {
+        if (item.variants && item.variants.length > 0) {
+          item.variants.forEach((v, index) => {
+            inlineVariants.push({
+              id: `${item.id}-${index}`,
+              variantCode: `${item.baseRefCode}-${v.color || ''}${v.size || ''}`,
+              attributes: { color: v.color, size: v.size },
+              stockQuantity: v.quantity,
+              item: item,
+              isInlineVariant: true,
+              variantIndex: index
+            })
+          })
+        }
+      })
+      
+      setVariants([...variantsRes.data, ...inlineVariants])
     } catch (error) {
       console.error('Failed to fetch items and variants:', error)
     }
@@ -321,10 +340,10 @@ const Billing = () => {
                   fullWidth
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={6}>
                 <Autocomplete
                   options={[
-                    ...items.filter(item => item.stockQuantity > 0).map(item => ({
+                    ...items.filter(item => item.stockQuantity > 0 && (!item.variants || item.variants.length === 0)).map(item => ({
                       ...item,
                       type: 'item',
                       label: `${item.itemName} (${item.baseRefCode}) - Stock: ${item.stockQuantity}`

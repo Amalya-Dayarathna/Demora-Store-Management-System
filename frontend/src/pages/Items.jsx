@@ -3,9 +3,9 @@ import {
   Typography, Button, Table, TableBody, TableCell, TableContainer,
   TableHead, TableRow, Paper, Dialog, DialogTitle, DialogContent,
   DialogActions, TextField, Box, IconButton, FormControl, InputLabel,
-  Select, MenuItem, Grid
+  Select, MenuItem, Grid, Chip
 } from '@mui/material'
-import { Add, Edit, Delete, QrCode, Search, Inventory } from '@mui/icons-material'
+import { Add, Edit, Delete, QrCode, Search, Inventory, AddCircle, RemoveCircle } from '@mui/icons-material'
 import { useBusiness } from '../context/BusinessContext'
 import { formatCurrency } from '../utils/currency'
 import axios from 'axios'
@@ -31,7 +31,9 @@ const Items = () => {
     categoryId: '',
     costPrice: '',
     sellingPrice: '',
-    stockQuantity: ''
+    stockQuantity: '',
+    variants: [],
+    tags: []
   })
 
   useEffect(() => {
@@ -88,13 +90,17 @@ const Items = () => {
       categoryId: item.categoryId,
       costPrice: item.costPrice.toString(),
       sellingPrice: item.sellingPrice.toString(),
-      stockQuantity: item.stockQuantity?.toString() || '0'
+      stockQuantity: item.stockQuantity?.toString() || '0',
+      variants: item.variants || [],
+      tags: item.tags || []
     } : {
       itemName: '',
       categoryId: '',
       costPrice: '',
       sellingPrice: '',
-      stockQuantity: ''
+      stockQuantity: '',
+      variants: [],
+      tags: []
     })
     setOpen(true)
   }
@@ -102,11 +108,20 @@ const Items = () => {
   const handleClose = () => {
     setOpen(false)
     setEditingItem(null)
-    setFormData({ itemName: '', categoryId: '', costPrice: '', sellingPrice: '', stockQuantity: '' })
+    setFormData({ itemName: '', categoryId: '', costPrice: '', sellingPrice: '', stockQuantity: '', variants: [], tags: [] })
   }
 
   const handleSubmit = async () => {
     try {
+      if (formData.variants.length > 0) {
+        const variantTotal = formData.variants.reduce((sum, v) => sum + (parseInt(v.quantity) || 0), 0)
+        const totalStock = parseInt(formData.stockQuantity) || 0
+        if (variantTotal !== totalStock) {
+          alert(`Total stock must equal sum of variant quantities. Variant total: ${variantTotal}, Stock: ${totalStock}`)
+          return
+        }
+      }
+      
       const data = { ...formData, businessId: selectedBusiness.id }
       
       if (editingItem) {
@@ -119,6 +134,7 @@ const Items = () => {
       handleClose()
     } catch (error) {
       console.error('Failed to save item:', error)
+      alert(error.response?.data?.error || 'Failed to save item')
     }
   }
 
@@ -141,6 +157,39 @@ const Items = () => {
     }
   }
 
+  const getTagColor = (tag) => {
+    const tagLower = tag.toLowerCase()
+    if (tagLower.includes('women') || tagLower.includes('woman')) return '#9c27b0'
+    if (tagLower.includes('kids') || tagLower.includes('kid') || tagLower.includes('children')) return '#2196f3'
+    if (tagLower.includes('men') || tagLower.includes('mens') || tagLower.includes('male')) return '#4caf50'
+    if (tagLower.includes('summer') || tagLower.includes('spring')) return '#ff9800'
+    if (tagLower.includes('winter') || tagLower.includes('fall')) return '#00bcd4'
+    if (tagLower.includes('sale') || tagLower.includes('discount')) return '#f44336'
+    return '#757575'
+  }
+
+  const addVariant = () => {
+    setFormData({
+      ...formData,
+      variants: [...formData.variants, { color: '', size: '', quantity: 0 }]
+    })
+  }
+
+  const removeVariant = (index) => {
+    const newVariants = formData.variants.filter((_, i) => i !== index)
+    setFormData({ ...formData, variants: newVariants })
+  }
+
+  const updateVariant = (index, field, value) => {
+    const newVariants = [...formData.variants]
+    newVariants[index] = { ...newVariants[index], [field]: value }
+    setFormData({ ...formData, variants: newVariants })
+  }
+
+  const calculateVariantTotal = () => {
+    return formData.variants.reduce((sum, v) => sum + (parseInt(v.quantity) || 0), 0)
+  }
+
   const handleStockUpdate = async () => {
     try {
       await axios.put(`/api/items/${selectedItem.id}/stock`, stockData)
@@ -149,6 +198,17 @@ const Items = () => {
       setStockData({ quantity: '', operation: 'add' })
     } catch (error) {
       console.error('Failed to update stock:', error)
+    }
+  }
+
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this item?')) {
+      try {
+        await axios.delete(`/api/items/${id}`)
+        await fetchItems()
+      } catch (error) {
+        console.error('Failed to delete item:', error)
+      }
     }
   }
 
@@ -217,7 +277,7 @@ const Items = () => {
               <TableCell>Cost Price Code</TableCell>
               <TableCell>Selling Price (LKR)</TableCell>
               <TableCell>Total Stock</TableCell>
-              <TableCell>Variants</TableCell>
+              <TableCell>Variants & Tags</TableCell>
               <TableCell>QR Code</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
@@ -232,7 +292,35 @@ const Items = () => {
                 <TableCell>{item.costPriceCode}</TableCell>
                 <TableCell>{formatCurrency(item.sellingPrice)}</TableCell>
                 <TableCell>{item.totalStock || 0}</TableCell>
-                <TableCell>{item._count?.variants || 0}</TableCell>
+                <TableCell>
+                  <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    {item.variants && item.variants.length > 0 && (
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                        {item.variants.map((v, i) => (
+                          <Chip 
+                            key={i} 
+                            label={`${v.color || ''}${v.size ? ' ' + v.size : ''}: ${v.quantity}`}
+                            size="small"
+                          />
+                        ))}
+                      </Box>
+                    )}
+                    {item.tags && item.tags.length > 0 && (
+                      <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                        {item.tags.map((tag, i) => (
+                          <Chip 
+                            key={i} 
+                            label={tag}
+                            size="small"
+                            variant="outlined"
+                            sx={{ borderColor: getTagColor(tag), color: getTagColor(tag) }}
+                          />
+                        ))}
+                      </Box>
+                    )}
+                    {(!item.variants || item.variants.length === 0) && (!item.tags || item.tags.length === 0) && 'None'}
+                  </Box>
+                </TableCell>
                 <TableCell>
                   <IconButton onClick={() => showQRCode(item)}>
                     <QrCode />
@@ -321,7 +409,83 @@ const Items = () => {
             variant="outlined"
             value={formData.stockQuantity}
             onChange={(e) => setFormData({ ...formData, stockQuantity: e.target.value })}
+            sx={{ mb: 2 }}
           />
+          
+          <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <Typography variant="subtitle1">Tags (Optional)</Typography>
+              <Button startIcon={<AddCircle />} onClick={() => setFormData({ ...formData, tags: [...formData.tags, ''] })} size="small">
+                Add Tag
+              </Button>
+            </Box>
+            
+            {formData.tags.map((tag, index) => (
+              <Box key={index} sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
+                <TextField
+                  label="Tag (e.g., Women, Kids, Summer)"
+                  size="small"
+                  fullWidth
+                  value={tag}
+                  onChange={(e) => {
+                    const newTags = [...formData.tags]
+                    newTags[index] = e.target.value
+                    setFormData({ ...formData, tags: newTags })
+                  }}
+                />
+                <IconButton onClick={() => setFormData({ ...formData, tags: formData.tags.filter((_, i) => i !== index) })} color="error" size="small">
+                  <RemoveCircle />
+                </IconButton>
+              </Box>
+            ))}
+          </Box>
+          
+          <Box sx={{ mb: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+              <Typography variant="subtitle1">Variants (Optional)</Typography>
+              <Button startIcon={<AddCircle />} onClick={addVariant} size="small">
+                Add Variant
+              </Button>
+            </Box>
+            
+            {formData.variants.length > 0 && (
+              <Box sx={{ mb: 1 }}>
+                <Typography variant="body2" color={calculateVariantTotal() === parseInt(formData.stockQuantity || 0) ? 'success.main' : 'error.main'}>
+                  Variant Total: {calculateVariantTotal()} / {formData.stockQuantity || 0}
+                </Typography>
+              </Box>
+            )}
+            
+            {formData.variants.map((variant, index) => (
+              <Box key={index} sx={{ display: 'flex', gap: 1, mb: 1, alignItems: 'center' }}>
+                <TextField
+                  label="Color"
+                  size="small"
+                  value={variant.color}
+                  onChange={(e) => updateVariant(index, 'color', e.target.value)}
+                  sx={{ flex: 1 }}
+                />
+                <TextField
+                  label="Size"
+                  size="small"
+                  value={variant.size}
+                  onChange={(e) => updateVariant(index, 'size', e.target.value)}
+                  sx={{ flex: 1 }}
+                />
+                <TextField
+                  label="Quantity"
+                  type="number"
+                  size="small"
+                  value={variant.quantity}
+                  onChange={(e) => updateVariant(index, 'quantity', parseInt(e.target.value) || 0)}
+                  sx={{ width: 100 }}
+                />
+                <IconButton onClick={() => removeVariant(index)} color="error" size="small">
+                  <RemoveCircle />
+                </IconButton>
+              </Box>
+            ))}
+          </Box>
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>

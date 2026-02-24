@@ -14,19 +14,19 @@ router.get('/:businessId', async (req, res) => {
       where: { businessId },
       include: {
         category: true,
-        variants: {
+        variantRecords: {
           select: {
             stockQuantity: true
           }
         },
-        _count: { select: { variants: true } }
+        _count: { select: { variantRecords: true } }
       }
     });
     
     // Calculate total stock for each item (item stock + variant stocks)
     const itemsWithStock = items.map(item => ({
       ...item,
-      totalStock: item.stockQuantity + item.variants.reduce((sum, variant) => sum + variant.stockQuantity, 0)
+      totalStock: item.stockQuantity + item.variantRecords.reduce((sum, variant) => sum + variant.stockQuantity, 0)
     }));
     
     res.json(itemsWithStock);
@@ -38,21 +38,25 @@ router.get('/:businessId', async (req, res) => {
 // Create item
 router.post('/', async (req, res) => {
   try {
-    const { itemName, categoryId, costPrice, sellingPrice, businessId, stockQuantity } = req.body;
+    const { itemName, categoryId, costPrice, sellingPrice, businessId, stockQuantity, variants, tags } = req.body;
     
-    // Get category for code generation
     const category = await prisma.category.findUnique({
       where: { id: categoryId }
     });
     
-    // Generate base ref code
     const itemCount = await prisma.item.count({
       where: { categoryId }
     });
     const baseRefCode = `${category.categoryCode}-${String(itemCount + 1).padStart(3, '0')}`;
-    
-    // Generate cost price code
     const costPriceCode = generateCostPriceCode(Math.floor(parseFloat(costPrice)));
+    
+    const totalStock = parseInt(stockQuantity || 0);
+    if (variants && variants.length > 0) {
+      const variantTotal = variants.reduce((sum, v) => sum + parseInt(v.quantity || 0), 0);
+      if (variantTotal !== totalStock) {
+        return res.status(400).json({ error: 'Total stock must equal sum of variant quantities' });
+      }
+    }
     
     const item = await prisma.item.create({
       data: {
@@ -62,19 +66,20 @@ router.post('/', async (req, res) => {
         costPrice: parseFloat(costPrice),
         costPriceCode,
         sellingPrice: parseFloat(sellingPrice),
-        stockQuantity: parseInt(stockQuantity || 0),
+        stockQuantity: totalStock,
+        variants: variants || [],
+        tags: tags || [],
         businessId
       },
       include: { category: true }
     });
     
-    // Record initial stock movement if stock > 0
-    if (parseInt(stockQuantity || 0) > 0) {
+    if (totalStock > 0) {
       await prisma.stockMovement.create({
         data: {
           itemId: item.id,
           movementType: 'IN',
-          quantity: parseInt(stockQuantity),
+          quantity: totalStock,
           reason: 'initial',
           businessId
         }
@@ -91,9 +96,15 @@ router.post('/', async (req, res) => {
 router.put('/:id', async (req, res) => {
   try {
     const { id } = req.params;
-    const { itemName, costPrice, sellingPrice, stockQuantity } = req.body;
+    const { itemName, costPrice, sellingPrice, stockQuantity, variants, tags } = req.body;
     
-    // Generate new cost price code
+    if (variants && variants.length > 0 && stockQuantity !== undefined) {
+      const variantTotal = variants.reduce((sum, v) => sum + parseInt(v.quantity || 0), 0);
+      if (variantTotal !== parseInt(stockQuantity)) {
+        return res.status(400).json({ error: 'Total stock must equal sum of variant quantities' });
+      }
+    }
+    
     const costPriceCode = generateCostPriceCode(Math.floor(parseFloat(costPrice)));
     
     const item = await prisma.item.update({
@@ -103,7 +114,9 @@ router.put('/:id', async (req, res) => {
         costPrice: parseFloat(costPrice),
         costPriceCode,
         sellingPrice: parseFloat(sellingPrice),
-        stockQuantity: stockQuantity !== undefined ? parseInt(stockQuantity) : undefined
+        stockQuantity: stockQuantity !== undefined ? parseInt(stockQuantity) : undefined,
+        variants: variants !== undefined ? variants : undefined,
+        tags: tags !== undefined ? tags : undefined
       },
       include: { category: true }
     });

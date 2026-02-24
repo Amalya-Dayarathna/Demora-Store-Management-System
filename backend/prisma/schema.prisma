@@ -51,10 +51,13 @@ model Item {
   sellingPrice Float
   stockQuantity Int    @default(0)
   businessId   String
+  variants     Json?   // Inline variants: [{color, size, quantity}]
+  tags         Json?   // Tags for filtering: ["Women", "Kids", "Mens"]
+  images       Json?   // Array of image paths: ["path1.jpg", "path2.jpg", "path3.jpg"]
   
   business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
   category       Category        @relation(fields: [categoryId], references: [id])
-  variants       Variant[]
+  variantRecords Variant[]       @relation("ItemVariants")
   billItems      BillItem[]
   stockMovements StockMovement[]
   giftBoxItems   GiftBoxItem[]
@@ -72,7 +75,7 @@ model Variant {
   
   business       Business        @relation(fields: [businessId], references: [id], onDelete: Cascade)
   businessId     String
-  item           Item            @relation(fields: [itemId], references: [id])
+  item           Item            @relation("ItemVariants", fields: [itemId], references: [id])
   billItems      BillItem[]
   stockMovements StockMovement[]
   
