@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { apiService } from '../services/api';
 import ProductCard from '../components/ProductCard';
+import PageHeader from '../components/PageHeader';
 import { Search } from 'lucide-react';
 
 export default function Shop() {
@@ -69,13 +70,9 @@ export default function Shop() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        {/* Header */}
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold text-black mb-4">Shop</h1>
-          <p className="text-gray-600">Browse our complete collection</p>
-        </div>
+      <PageHeader title="Shop" subtitle="Browse our complete collection" />
 
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {/* Search Bar */}
         <div className="mb-8">
           <div className="relative">
