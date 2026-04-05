@@ -46,12 +46,10 @@ const Layout = ({ children }) => {
 
   const drawer = (
     <div>
-      <Toolbar>
-        <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 'bold' }}>
-          DEMORA
-        </Typography>
+      <Toolbar sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '80px', pb: 0 }}>
+        <img src="/images/demora.png" alt="Demora" style={{ height: '125px' }} />
       </Toolbar>
-      <List>
+      <List sx={{ pt: 0 }}>
         {menuItems.map((item) => (
           <ListItem
             button
