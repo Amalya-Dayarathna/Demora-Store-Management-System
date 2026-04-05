@@ -37,12 +37,41 @@ router.get('/:businessId', async (req, res) => {
 // Create bill
 router.post('/', async (req, res) => {
   try {
-    const { businessId, items, codDelivery, packagingCost, customerName, customerPhone, customerAddress, paymentType } = req.body;
+    const { businessId, items, codDelivery, packagingCost, customerName, customerPhone, customerPhone2, customerAddress, orderId, trackingId, paymentType } = req.body;
     
     // Validate stock availability
     for (const item of items) {
+      // Check if it's an inline variant (itemId-index format)
+      if (item.variantId.includes('-') && !item.variantId.startsWith('item-')) {
+        const [itemId, variantIndex] = item.variantId.split('-');
+        const actualItem = await prisma.item.findUnique({
+          where: { id: itemId }
+        });
+        
+        if (!actualItem) {
+          return res.status(400).json({
+            error: `Item not found`
+          });
+        }
+        
+        // Check inline variant stock
+        const inlineVariants = actualItem.variants || [];
+        const variantIdx = parseInt(variantIndex);
+        if (variantIdx >= inlineVariants.length) {
+          return res.status(400).json({
+            error: `Variant not found`
+          });
+        }
+        
+        const inlineVariant = inlineVariants[variantIdx];
+        if (inlineVariant.quantity < item.quantity) {
+          return res.status(400).json({
+            error: `Insufficient stock for variant ${actualItem.baseRefCode}`
+          });
+        }
+      }
       // Check if it's a virtual variant (item-based)
-      if (item.variantId.startsWith('item-')) {
+      else if (item.variantId.startsWith('item-')) {
         const itemId = item.variantId.replace('item-', '');
         const actualItem = await prisma.item.findUnique({
           where: { id: itemId }
@@ -78,8 +107,28 @@ router.post('/', async (req, res) => {
     const billItemsData = [];
     
     for (const item of items) {
+      // Handle inline variants (itemId-index format)
+      if (item.variantId.includes('-') && !item.variantId.startsWith('item-')) {
+        const [itemId, variantIndex] = item.variantId.split('-');
+        const actualItem = await prisma.item.findUnique({
+          where: { id: itemId },
+          include: { category: true }
+        });
+        
+        const total = actualItem.sellingPrice * item.quantity;
+        subtotal += total;
+        
+        billItemsData.push({
+          itemId: itemId,
+          variantIndex: parseInt(variantIndex),
+          quantity: item.quantity,
+          unitPrice: actualItem.sellingPrice,
+          total,
+          isInlineVariant: true
+        });
+      }
       // Handle both real variants and virtual item variants
-      if (item.variantId.startsWith('item-')) {
+      else if (item.variantId.startsWith('item-')) {
         // Virtual variant from item
         const itemId = item.variantId.replace('item-', '');
         const actualItem = await prisma.item.findUnique({
@@ -130,7 +179,10 @@ router.post('/', async (req, res) => {
           paymentType: paymentType || 'COD',
           customerName,
           customerPhone,
+          customerPhone2,
           customerAddress,
+          orderId,
+          trackingId,
           businessId
         }
       });
@@ -139,8 +191,50 @@ router.post('/', async (req, res) => {
       for (let i = 0; i < billItemsData.length; i++) {
         const itemData = billItemsData[i];
         
+        // Check if this is an inline variant
+        if (itemData.isInlineVariant) {
+          // Inline variant - update item's variants JSON
+          const item = await tx.item.findUnique({
+            where: { id: itemData.itemId }
+          });
+          
+          const variants = item.variants || [];
+          variants[itemData.variantIndex].quantity -= itemData.quantity;
+          
+          await tx.item.update({
+            where: { id: itemData.itemId },
+            data: {
+              variants: variants,
+              stockQuantity: {
+                decrement: itemData.quantity
+              }
+            }
+          });
+          
+          await tx.billItem.create({
+            data: {
+              billId: newBill.id,
+              itemId: itemData.itemId,
+              quantity: itemData.quantity,
+              unitPrice: itemData.unitPrice,
+              total: itemData.total
+            }
+          });
+          
+          // Record stock movement with variant index
+          await tx.stockMovement.create({
+            data: {
+              itemId: itemData.itemId,
+              movementType: "OUT",
+              quantity: itemData.quantity,
+              reason: "bill",
+              reference: `${newBill.billNumber}:variant-${itemData.variantIndex}`,
+              businessId
+            }
+          });
+        }
         // Check if this is an item variant (virtual) or real variant
-        if (itemData.variantId.startsWith('item-')) {
+        else if (itemData.variantId && itemData.variantId.startsWith('item-')) {
           // Virtual variant (item-based)
           const itemId = itemData.variantId.replace('item-', '');
           
@@ -211,10 +305,10 @@ router.post('/', async (req, res) => {
         }
       }
       
-      // Add income record
+      // Add income record (subtotal + packaging, excluding delivery charges)
       await tx.income.create({
         data: {
-          amount: grandTotal,
+          amount: subtotal + (packagingCost || 0),
           description: `Bill ${billNumber}`,
           source: 'billing',
           businessId
@@ -316,7 +410,7 @@ router.delete('/:id', async (req, res) => {
   try {
     const { id } = req.params;
     
-    // Get bill with all related data
+    // Get bill with all related data including stock movements
     const bill = await prisma.bill.findUnique({
       where: { id },
       include: {
@@ -333,20 +427,59 @@ router.delete('/:id', async (req, res) => {
       return res.status(404).json({ error: 'Bill not found' });
     }
     
+    // Get stock movements for this bill to find variant indices
+    const stockMovements = await prisma.stockMovement.findMany({
+      where: {
+        reference: {
+          startsWith: bill.billNumber
+        },
+        reason: 'bill'
+      }
+    });
+    
     // Reverse all effects in transaction
     await prisma.$transaction(async (tx) => {
       // Restore stock for each bill item
       for (const billItem of bill.billItems) {
         if (billItem.itemId) {
-          // Item-based billing - restore item stock
-          await tx.item.update({
-            where: { id: billItem.itemId },
-            data: {
-              stockQuantity: {
-                increment: billItem.quantity
-              }
-            }
+          // Find the stock movement for this item to get variant index
+          const stockMovement = stockMovements.find(sm => sm.itemId === billItem.itemId);
+          
+          // Get the item to check if it has inline variants
+          const item = await tx.item.findUnique({
+            where: { id: billItem.itemId }
           });
+          
+          // Check if this was an inline variant bill by looking at the reference
+          if (stockMovement && stockMovement.reference && stockMovement.reference.includes(':variant-')) {
+            // Extract variant index from reference (format: BILL-xxx:variant-0)
+            const variantIndex = parseInt(stockMovement.reference.split(':variant-')[1]);
+            
+            const variants = [...item.variants];
+            if (variantIndex >= 0 && variantIndex < variants.length) {
+              variants[variantIndex].quantity += billItem.quantity;
+            }
+            
+            await tx.item.update({
+              where: { id: billItem.itemId },
+              data: {
+                stockQuantity: {
+                  increment: billItem.quantity
+                },
+                variants: variants
+              }
+            });
+          } else {
+            // Item-based billing without inline variants - just restore item stock
+            await tx.item.update({
+              where: { id: billItem.itemId },
+              data: {
+                stockQuantity: {
+                  increment: billItem.quantity
+                }
+              }
+            });
+          }
           
           // Create reverse stock movement
           await tx.stockMovement.create({
@@ -384,13 +517,13 @@ router.delete('/:id', async (req, res) => {
         }
       }
       
-      // Remove the income record created by this bill
+      // Remove the income record created by this bill (subtotal + packaging)
       await tx.income.deleteMany({
         where: {
           businessId: bill.businessId,
           source: 'billing',
           description: `Bill ${bill.billNumber}`,
-          amount: bill.grandTotal
+          amount: bill.subtotal + (bill.packagingCost || 0)
         }
       });
       

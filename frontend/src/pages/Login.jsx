@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Container, Paper, TextField, Button, Typography, Box, Alert
 } from '@mui/material'
@@ -10,6 +11,7 @@ const Login = () => {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
   const { login } = useAuth()
+  const navigate = useNavigate()
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -18,7 +20,9 @@ const Login = () => {
 
     const result = await login(username, password)
     
-    if (!result.success) {
+    if (result.success) {
+      navigate('/dashboard')
+    } else {
       setError(result.error)
     }
     

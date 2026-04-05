@@ -20,7 +20,10 @@ const Billing = () => {
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     phone: '',
-    address: ''
+    phone2: '',
+    address: '',
+    orderId: '',
+    trackingId: ''
   })
   const [showCustomerInfo, setShowCustomerInfo] = useState(false)
   const [codDelivery, setCodDelivery] = useState(0)
@@ -193,7 +196,10 @@ const Billing = () => {
         paymentType,
         customerName: customerInfo.name,
         customerPhone: customerInfo.phone,
-        customerAddress: customerInfo.address
+        customerPhone2: customerInfo.phone2,
+        customerAddress: customerInfo.address,
+        orderId: customerInfo.orderId,
+        trackingId: customerInfo.trackingId
       }
 
       const response = await axios.post('/api/bills', billData)
@@ -201,7 +207,7 @@ const Billing = () => {
       
       // Reset form
       setCart([])
-      setCustomerInfo({ name: '', phone: '', address: '' })
+      setCustomerInfo({ name: '', phone: '', phone2: '', address: '', orderId: '', trackingId: '' })
       setCodDelivery(0)
       setPackagingCost(0)
       setPaymentType('COD')
@@ -458,6 +464,13 @@ const Billing = () => {
                   onChange={(e) => setCustomerInfo({ ...customerInfo, phone: e.target.value })}
                 />
                 <TextField
+                  label="Phone 2 (Optional)"
+                  fullWidth
+                  margin="dense"
+                  value={customerInfo.phone2}
+                  onChange={(e) => setCustomerInfo({ ...customerInfo, phone2: e.target.value })}
+                />
+                <TextField
                   label="Address (Optional)"
                   fullWidth
                   multiline
@@ -465,6 +478,20 @@ const Billing = () => {
                   margin="dense"
                   value={customerInfo.address}
                   onChange={(e) => setCustomerInfo({ ...customerInfo, address: e.target.value })}
+                />
+                <TextField
+                  label="Order ID (Optional)"
+                  fullWidth
+                  margin="dense"
+                  value={customerInfo.orderId}
+                  onChange={(e) => setCustomerInfo({ ...customerInfo, orderId: e.target.value })}
+                />
+                <TextField
+                  label="Tracking ID (Optional)"
+                  fullWidth
+                  margin="dense"
+                  value={customerInfo.trackingId}
+                  onChange={(e) => setCustomerInfo({ ...customerInfo, trackingId: e.target.value })}
                 />
                 <Divider sx={{ my: 2 }} />
               </Collapse>
@@ -570,6 +597,15 @@ const Billing = () => {
               )}
               {createdBill.customerPhone && (
                 <Typography><strong>Phone:</strong> {createdBill.customerPhone}</Typography>
+              )}
+              {createdBill.customerPhone2 && (
+                <Typography><strong>Phone 2:</strong> {createdBill.customerPhone2}</Typography>
+              )}
+              {createdBill.orderId && (
+                <Typography><strong>Order ID:</strong> {createdBill.orderId}</Typography>
+              )}
+              {createdBill.trackingId && (
+                <Typography><strong>Tracking ID:</strong> {createdBill.trackingId}</Typography>
               )}
             </Grid>
             

@@ -22,7 +22,7 @@ const Layout = ({ children }) => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'))
 
   const menuItems = [
-    { text: 'Dashboard', icon: <Dashboard />, path: '/' },
+    { text: 'Dashboard', icon: <Dashboard />, path: '/dashboard' },
     { text: 'Businesses', icon: <Business />, path: '/businesses' },
     { text: 'Categories', icon: <Category />, path: '/categories' },
     { text: 'Items', icon: <Inventory />, path: '/items' },
@@ -37,6 +37,11 @@ const Layout = ({ children }) => {
 
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
+  }
+
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
   }
 
   const drawer = (
@@ -66,7 +71,7 @@ const Layout = ({ children }) => {
             <ListItemText primary={item.text} />
           </ListItem>
         ))}
-        <ListItem button onClick={logout}>
+        <ListItem button onClick={handleLogout}>
           <ListItemIcon><Logout /></ListItemIcon>
           <ListItemText primary="Logout" />
         </ListItem>

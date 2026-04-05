@@ -25,12 +25,15 @@ const ProtectedRoute = ({ children }) => {
 }
 
 const AppRoutes = () => {
-  const { user } = useAuth()
+  const { user, loading } = useAuth()
+  
+  if (loading) return <div>Loading...</div>
   
   return (
     <Routes>
-      <Route path="/login" element={user ? <Navigate to="/" /> : <Login />} />
-      <Route path="/" element={
+      <Route path="/login" element={user ? <Navigate to="/dashboard" /> : <Login />} />
+      <Route path="/" element={<Navigate to={user ? "/dashboard" : "/login"} />} />
+      <Route path="/dashboard" element={
         <ProtectedRoute>
           <BusinessProvider>
             <Layout>

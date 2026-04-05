@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { apiService } from '../services/api';
@@ -25,7 +25,7 @@ export default function Checkout() {
   });
 
   // Get business ID on mount
-  useState(() => {
+  useEffect(() => {
     const fetchBusinessId = async () => {
       try {
         const businessesRes = await apiService.getBusinesses();
@@ -77,9 +77,9 @@ export default function Checkout() {
         bid = demora.id;
       }
 
-      // Prepare bill items
+      // Prepare bill items - send as item-based variants
       const billItems = cart.map((item) => ({
-        variantId: `item-${item.id}`, // Virtual variant ID for items without variants
+        variantId: `item-${item.id}`, // Virtual variant ID format expected by backend
         quantity: item.quantity,
       }));
 
@@ -94,6 +94,8 @@ export default function Checkout() {
         codDelivery: parseFloat(formData.codDelivery) || 0,
         packagingCost: parseFloat(formData.packagingCost) || 0,
       };
+
+      console.log('Sending bill data:', billData);
 
       const response = await apiService.createBill(billData);
 
@@ -114,8 +116,8 @@ export default function Checkout() {
       clearCart();
       navigate('/order-confirmation', { state: { order: orderData } });
     } catch (err) {
+      console.error('Error creating order:', err);
       setError(err.response?.data?.error || 'Failed to create order');
-      console.error(err);
     } finally {
       setLoading(false);
     }

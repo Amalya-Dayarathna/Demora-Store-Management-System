@@ -100,7 +100,7 @@ const StockHistory = () => {
                 </Typography>
               </Box>
               <Typography variant="body2" color="text.secondary">
-                {item.stockMovements.length + item.variants.reduce((sum, v) => sum + v.stockMovements.length, 0)} movements
+                {item.stockMovements.length + (item.variantRecords || []).reduce((sum, v) => sum + v.stockMovements.length, 0)} movements
               </Typography>
             </Box>
           </AccordionSummary>
@@ -165,8 +165,8 @@ const StockHistory = () => {
                     <Typography variant="h6" gutterBottom>
                       Variant Stock History
                     </Typography>
-                    {item.variants.length > 0 ? (
-                      item.variants.map((variant) => (
+                    {(item.variantRecords || []).length > 0 ? (
+                      item.variantRecords.map((variant) => (
                         <Box key={variant.id} sx={{ mb: 2 }}>
                           <Typography variant="subtitle2" gutterBottom>
                             {variant.variantCode} (Stock: {variant.stockQuantity})
