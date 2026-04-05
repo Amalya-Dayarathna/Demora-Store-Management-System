@@ -5,7 +5,7 @@ import {
   DialogActions, TextField, Box, IconButton, FormControl, InputLabel,
   Select, MenuItem, Grid, Chip
 } from '@mui/material'
-import { Add, Edit, Delete, QrCode, Search, Inventory, AddCircle, RemoveCircle } from '@mui/icons-material'
+import { Add, Edit, Delete, QrCode2 as BarcodeIcon, Search, Inventory, AddCircle, RemoveCircle } from '@mui/icons-material'
 import { useBusiness } from '../context/BusinessContext'
 import { formatCurrency } from '../utils/currency'
 import axios from 'axios'
@@ -17,6 +17,7 @@ const Items = () => {
   const [categories, setCategories] = useState([])
   const [open, setOpen] = useState(false)
   const [qrOpen, setQrOpen] = useState(false)
+  const [barcodeOpen, setBarcodeOpen] = useState(false)
   const [stockOpen, setStockOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
   const [editingItem, setEditingItem] = useState(null)
@@ -138,14 +139,9 @@ const Items = () => {
     }
   }
 
-  const showQRCode = async (item) => {
-    try {
-      const response = await axios.get(`/api/items/${item.id}/qr-image`)
-      setSelectedItem({ ...item, qrImage: response.data.qrCode })
-      setQrOpen(true)
-    } catch (error) {
-      console.error('Failed to generate QR code:', error)
-    }
+  const showBarcodes = async (item) => {
+    setSelectedItem(item)
+    setBarcodeOpen(true)
   }
 
   const downloadQRCode = () => {
@@ -278,7 +274,6 @@ const Items = () => {
               <TableCell>Selling Price (LKR)</TableCell>
               <TableCell>Total Stock</TableCell>
               <TableCell>Variants & Tags</TableCell>
-              <TableCell>QR Code</TableCell>
               <TableCell>Actions</TableCell>
             </TableRow>
           </TableHead>
@@ -322,11 +317,9 @@ const Items = () => {
                   </Box>
                 </TableCell>
                 <TableCell>
-                  <IconButton onClick={() => showQRCode(item)}>
-                    <QrCode />
+                  <IconButton onClick={() => showBarcodes(item)}>
+                    <BarcodeIcon />
                   </IconButton>
-                </TableCell>
-                <TableCell>
                   <IconButton
                     onClick={() => {
                       setSelectedItem(item)
@@ -527,6 +520,81 @@ const Items = () => {
         <DialogActions>
           <Button onClick={() => setStockOpen(false)}>Cancel</Button>
           <Button onClick={handleStockUpdate} variant="contained">Update</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Barcode Dialog */}
+      <Dialog open={barcodeOpen} onClose={() => setBarcodeOpen(false)} maxWidth="md" fullWidth>
+        <DialogTitle>Barcodes - {selectedItem?.itemName}</DialogTitle>
+        <DialogContent>
+          <Box sx={{ py: 2 }}>
+            {selectedItem && (
+              <Box>
+                {/* Item Barcode */}
+                {selectedItem.barcode && (
+                  <Box sx={{ mb: 3, p: 2, border: '1px solid #ddd', borderRadius: 1 }}>
+                    <Typography variant="subtitle2" gutterBottom>Item Barcode</Typography>
+                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                      {selectedItem.baseRefCode}
+                    </Typography>
+                    <Box sx={{ textAlign: 'center', my: 2 }}>
+                      <img 
+                        src={`https://barcode.tec-it.com/barcode.ashx?data=${selectedItem.barcode}&code=EAN13&translate-esc=on`}
+                        alt="Barcode"
+                        style={{ maxWidth: '100%' }}
+                      />
+                    </Box>
+                    <Typography variant="caption" sx={{ display: 'block', textAlign: 'center' }}>
+                      {selectedItem.barcode}
+                    </Typography>
+                  </Box>
+                )}
+                
+                {/* Variant Barcodes */}
+                {selectedItem.variants && selectedItem.variants.length > 0 && (
+                  <Box>
+                    <Typography variant="subtitle1" gutterBottom>Inline Variant Barcodes</Typography>
+                    {selectedItem.variants.map((variant, index) => (
+                      <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid #ddd', borderRadius: 1 }}>
+                        <Typography variant="body2" gutterBottom>
+                          {variant.color && `Color: ${variant.color}`}
+                          {variant.color && variant.size && ' | '}
+                          {variant.size && `Size: ${variant.size}`}
+                          {' - Stock: '}{variant.quantity}
+                        </Typography>
+                        {variant.barcode && (
+                          <>
+                            <Box sx={{ textAlign: 'center', my: 2 }}>
+                              <img 
+                                src={`https://barcode.tec-it.com/barcode.ashx?data=${variant.barcode}&code=EAN13&translate-esc=on`}
+                                alt="Variant Barcode"
+                                style={{ maxWidth: '100%' }}
+                              />
+                            </Box>
+                            <Typography variant="caption" sx={{ display: 'block', textAlign: 'center' }}>
+                              {variant.barcode}
+                            </Typography>
+                          </>
+                        )}
+                        {!variant.barcode && (
+                          <Typography variant="caption" color="error">
+                            No barcode generated. Please update this item to generate barcodes.
+                          </Typography>
+                        )}
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+                
+                {!selectedItem.barcode && (!selectedItem.variants || selectedItem.variants.length === 0) && (
+                  <Typography color="text.secondary">No barcode available for this item</Typography>
+                )}
+              </Box>
+            )}
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setBarcodeOpen(false)}>Close</Button>
         </DialogActions>
       </Dialog>
 

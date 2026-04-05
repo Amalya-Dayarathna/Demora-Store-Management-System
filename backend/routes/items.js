@@ -1,7 +1,7 @@
 const express = require('express');
-const QRCode = require('qrcode');
 const { PrismaClient } = require('@prisma/client');
 const { generateCostPriceCode } = require('../utils/priceUtils');
+const { generateItemBarcode, generateVariantBarcode } = require('../utils/barcodeGenerator');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -56,6 +56,11 @@ router.post('/', async (req, res) => {
       if (variantTotal !== totalStock) {
         return res.status(400).json({ error: 'Total stock must equal sum of variant quantities' });
       }
+      
+      // Generate barcodes for inline variants
+      variants.forEach((variant, index) => {
+        variant.barcode = generateVariantBarcode(businessId, `${baseRefCode}-${index}`);
+      });
     }
     
     const item = await prisma.item.create({
@@ -67,6 +72,7 @@ router.post('/', async (req, res) => {
         costPriceCode,
         sellingPrice: parseFloat(sellingPrice),
         stockQuantity: totalStock,
+        barcode: generateItemBarcode(businessId, baseRefCode),
         variants: variants || [],
         tags: tags || [],
         businessId
@@ -103,6 +109,16 @@ router.put('/:id', async (req, res) => {
       if (variantTotal !== parseInt(stockQuantity)) {
         return res.status(400).json({ error: 'Total stock must equal sum of variant quantities' });
       }
+      
+      // Get existing item to preserve or generate barcodes
+      const existingItem = await prisma.item.findUnique({ where: { id } });
+      
+      // Generate barcodes for new variants or preserve existing ones
+      variants.forEach((variant, index) => {
+        if (!variant.barcode) {
+          variant.barcode = generateVariantBarcode(existingItem.businessId, `${existingItem.baseRefCode}-${index}`);
+        }
+      });
     }
     
     const costPriceCode = generateCostPriceCode(Math.floor(parseFloat(costPrice)));
@@ -121,6 +137,84 @@ router.put('/:id', async (req, res) => {
       include: { category: true }
     });
     res.json(item);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get barcode by scan (supports inline variant barcodes)
+router.get('/barcode/:barcode', async (req, res) => {
+  try {
+    const { barcode } = req.params;
+    
+    // Check if it's an item barcode
+    const item = await prisma.item.findUnique({
+      where: { barcode },
+      include: {
+        category: true,
+        variantRecords: true
+      }
+    });
+    
+    if (item) {
+      return res.json({
+        type: 'item',
+        data: item
+      });
+    }
+    
+    // Check if it's an inline variant barcode
+    const itemsWithVariants = await prisma.item.findMany({
+      where: {
+        variants: {
+          path: '$[*].barcode',
+          array_contains: barcode
+        }
+      },
+      include: {
+        category: true
+      }
+    });
+    
+    if (itemsWithVariants.length > 0) {
+      const item = itemsWithVariants[0];
+      const variantIndex = item.variants.findIndex(v => v.barcode === barcode);
+      
+      if (variantIndex !== -1) {
+        return res.json({
+          type: 'inline-variant',
+          data: {
+            id: `${item.id}-${variantIndex}`,
+            itemId: item.id,
+            variantIndex,
+            variant: item.variants[variantIndex],
+            item: item,
+            barcode: barcode
+          }
+        });
+      }
+    }
+    
+    // Check if it's a variant barcode
+    const variant = await prisma.variant.findUnique({
+      where: { barcode },
+      include: {
+        item: {
+          include: {
+            category: true
+          }
+        }
+      }
+    });
+    
+    if (variant) {
+      return res.json({
+        type: 'variant',
+        data: variant
+      });
+    }
+    
+    res.status(404).json({ error: 'Barcode not found' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }

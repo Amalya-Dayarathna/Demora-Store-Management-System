@@ -1,6 +1,6 @@
 const express = require('express');
-const QRCode = require('qrcode');
 const { PrismaClient } = require('@prisma/client');
+const { generateVariantBarcode } = require('../utils/barcodeGenerator');
 
 const router = express.Router();
 const prisma = new PrismaClient();
@@ -19,6 +19,86 @@ router.get('/:businessId', async (req, res) => {
       orderBy: { variantCode: 'asc' }
     });
     res.json(variants);
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get variant by barcode (supports both variant and item barcodes and inline variants)
+router.get('/barcode/:barcode', async (req, res) => {
+  try {
+    const { barcode } = req.params;
+    const { businessId } = req.query;
+    
+    // First try to find variant by barcode
+    let variant = await prisma.variant.findFirst({
+      where: { barcode },
+      include: {
+        item: {
+          include: { category: true }
+        }
+      }
+    });
+    
+    if (variant) {
+      return res.json(variant);
+    }
+    
+    // Check if it's an inline variant barcode
+    const items = await prisma.item.findMany({
+      where: businessId ? { businessId } : {},
+      include: { category: true }
+    });
+    
+    for (const item of items) {
+      if (item.variants && Array.isArray(item.variants)) {
+        const variantIndex = item.variants.findIndex(v => v.barcode === barcode);
+        if (variantIndex !== -1) {
+          const inlineVariant = item.variants[variantIndex];
+          return res.json({
+            id: `${item.id}-${variantIndex}`,
+            itemId: item.id,
+            variantCode: `${item.baseRefCode}-${inlineVariant.color || inlineVariant.size || variantIndex}`,
+            attributes: { color: inlineVariant.color, size: inlineVariant.size },
+            stockQuantity: inlineVariant.quantity,
+            barcode: inlineVariant.barcode,
+            businessId: item.businessId,
+            item: item,
+            isInlineVariant: true,
+            variantIndex: variantIndex
+          });
+        }
+      }
+    }
+    
+    // If no variant found, try to find item by barcode and create virtual variant
+    const whereClause = { barcode };
+    if (businessId) {
+      whereClause.businessId = businessId;
+    }
+    
+    const item = await prisma.item.findFirst({
+      where: whereClause,
+      include: { category: true }
+    });
+    
+    if (item && item.stockQuantity > 0) {
+      // Create virtual variant for item
+      variant = {
+        id: `item-${item.id}`,
+        itemId: item.id,
+        variantCode: item.baseRefCode,
+        attributes: {},
+        stockQuantity: item.stockQuantity,
+        barcode: item.barcode,
+        businessId: item.businessId,
+        item: item,
+        isItemVariant: true
+      };
+      return res.json(variant);
+    }
+    
+    res.status(404).json({ error: 'Item or variant not found' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -103,7 +183,7 @@ router.post('/', async (req, res) => {
         variantCode,
         attributes,
         stockQuantity: parseInt(stockQuantity),
-        qrCodeValue: variantCode,
+        barcode: generateVariantBarcode(businessId, variantCode),
         businessId
       },
       include: {

@@ -49,6 +49,7 @@ model Item {
   businessId     String
   costPriceCode  String          @default("DDD")
   stockQuantity  Int             @default(0)
+  barcode        String?         @unique
   variants       Json?
   tags           Json?
   images         Json?
@@ -68,7 +69,7 @@ model Variant {
   variantCode    String          @unique
   attributes     Json
   stockQuantity  Int             @default(0)
-  qrCodeValue    String
+  barcode        String          @unique
   businessId     String
   billItems      BillItem[]
   stockMovements StockMovement[]

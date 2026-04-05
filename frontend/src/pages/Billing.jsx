@@ -6,17 +6,18 @@ import {
   Card, CardContent, Divider, Alert, Collapse, FormControl,
   InputLabel, Select, MenuItem, Autocomplete
 } from '@mui/material'
-import { Add, Remove, Delete, QrCodeScanner, Print, Download, ExpandMore, ExpandLess } from '@mui/icons-material'
+import { Add, Remove, Delete, QrCode2 as BarcodeIcon, Print, Download, ExpandMore, ExpandLess } from '@mui/icons-material'
 import { useBusiness } from '../context/BusinessContext'
-import QRScanner from '../components/QRScanner'
+import BarcodeScanner from '../components/BarcodeScanner'
 import { formatCurrency } from '../utils/currency'
 import axios from 'axios'
 
 const Billing = () => {
   const { selectedBusiness } = useBusiness()
   const [cart, setCart] = useState([])
-  const [qrScanOpen, setQrScanOpen] = useState(false)
-  const [qrInput, setQrInput] = useState('')
+  const [barcodeScanOpen, setBarcodeScanOpen] = useState(false)
+  const [barcodeInput, setBarcodeInput] = useState('')
+  const [barcodeSearching, setBarcodeSearching] = useState(false)
   const [customerInfo, setCustomerInfo] = useState({
     name: '',
     phone: '',
@@ -117,18 +118,24 @@ const Billing = () => {
     setError('')
   }
 
-  const addToCart = async (variantCode) => {
+  const addToCartByBarcode = async (barcode) => {
+    if (!barcode || !barcode.trim()) return
+    
+    setBarcodeSearching(true)
     try {
-      const response = await axios.get(`/api/variants/qr/${variantCode}?businessId=${selectedBusiness.id}`)
+      const response = await axios.get(`/api/variants/barcode/${barcode.trim()}?businessId=${selectedBusiness.id}`)
       const variant = response.data
       
-      // Handle virtual variant ID for items
-      const cartItemId = variant.isItemVariant ? `item-${variant.item.id}` : variant.id
+      // Handle virtual variant ID for items and inline variants
+      const cartItemId = variant.isItemVariant ? `item-${variant.item.id}` : 
+                        variant.isInlineVariant ? `${variant.itemId}-${variant.variantIndex}` :
+                        variant.id
       
       const existingItem = cart.find(item => item.variantId === cartItemId)
       if (existingItem) {
         if (existingItem.quantity >= variant.stockQuantity) {
           setError('Insufficient stock')
+          setBarcodeSearching(false)
           return
         }
         setCart(cart.map(item =>
@@ -139,6 +146,7 @@ const Billing = () => {
       } else {
         if (variant.stockQuantity === 0) {
           setError('Out of stock')
+          setBarcodeSearching(false)
           return
         }
         setCart([...cart, {
@@ -149,9 +157,11 @@ const Billing = () => {
         }])
       }
       setError('')
-      setQrInput('')
+      setBarcodeInput('')
     } catch (error) {
-      setError('Item or variant not found')
+      setError(error.response?.data?.error || 'Barcode not found')
+    } finally {
+      setBarcodeSearching(false)
     }
   }
 
@@ -333,51 +343,62 @@ const Billing = () => {
         <Grid item xs={12} md={8}>
           <Paper sx={{ p: 2, mb: 2 }}>
             <Grid container spacing={2}>
-              <Grid item xs={12} md={6}>
+              <Grid item xs={12} md={8}>
                 <TextField
-                  label="Scan/Enter QR Code"
-                  value={qrInput}
-                  onChange={(e) => setQrInput(e.target.value)}
+                  label="Scan/Enter Barcode"
+                  value={barcodeInput}
+                  onChange={(e) => setBarcodeInput(e.target.value)}
                   onKeyPress={(e) => {
-                    if (e.key === 'Enter' && qrInput.trim()) {
-                      addToCart(qrInput.trim())
+                    if (e.key === 'Enter' && barcodeInput.trim()) {
+                      addToCartByBarcode(barcodeInput.trim())
                     }
                   }}
                   fullWidth
+                  autoFocus
+                  placeholder="Scan barcode or type manually..."
+                  disabled={barcodeSearching}
+                  InputProps={{
+                    endAdornment: barcodeSearching ? (
+                      <Typography variant="caption" color="text.secondary">Searching...</Typography>
+                    ) : null
+                  }}
                 />
               </Grid>
-              <Grid item xs={12} md={6}>
-                <Autocomplete
-                  options={[
-                    ...items.filter(item => item.stockQuantity > 0 && (!item.variants || item.variants.length === 0)).map(item => ({
-                      ...item,
-                      type: 'item',
-                      label: `${item.itemName} (${item.baseRefCode}) - Stock: ${item.stockQuantity}`
-                    })),
-                    ...variants.filter(variant => variant.stockQuantity > 0).map(variant => ({
-                      ...variant,
-                      type: 'variant',
-                      label: `${variant.item.itemName} - ${variant.variantCode} - Stock: ${variant.stockQuantity}`
-                    }))
-                  ]}
-                  getOptionLabel={(option) => option.label}
-                  onChange={(event, value) => addToCartFromDropdown(value)}
-                  renderInput={(params) => (
-                    <TextField {...params} label="Select Item/Variant" fullWidth />
-                  )}
-                />
-              </Grid>
-              <Grid item xs={12} md={2}>
+              <Grid item xs={12} md={4}>
                 <Button
                   variant="contained"
-                  startIcon={<QrCodeScanner />}
-                  onClick={() => setQrScanOpen(true)}
+                  startIcon={<BarcodeIcon />}
+                  onClick={() => setBarcodeScanOpen(true)}
                   fullWidth
+                  sx={{ height: '56px' }}
                 >
-                  Scan
+                  Barcode Scanner
                 </Button>
               </Grid>
             </Grid>
+          </Paper>
+
+          <Paper sx={{ p: 2, mb: 2 }}>
+            <Typography variant="subtitle2" gutterBottom>Or select from list:</Typography>
+            <Autocomplete
+              options={[
+                ...items.filter(item => item.stockQuantity > 0 && (!item.variants || item.variants.length === 0)).map(item => ({
+                  ...item,
+                  type: 'item',
+                  label: `${item.itemName} (${item.baseRefCode}) - Stock: ${item.stockQuantity}`
+                })),
+                ...variants.filter(variant => variant.stockQuantity > 0).map(variant => ({
+                  ...variant,
+                  type: 'variant',
+                  label: `${variant.item.itemName} - ${variant.variantCode} - Stock: ${variant.stockQuantity}`
+                }))
+              ]}
+              getOptionLabel={(option) => option.label}
+              onChange={(event, value) => addToCartFromDropdown(value)}
+              renderInput={(params) => (
+                <TextField {...params} label="Select Item/Variant" fullWidth />
+              )}
+            />
           </Paper>
 
           <TableContainer component={Paper}>
@@ -663,24 +684,12 @@ const Billing = () => {
         </Paper>
       )}
 
-      <Dialog open={qrScanOpen} onClose={() => setQrScanOpen(false)}>
-        <DialogTitle>QR Code Scanner</DialogTitle>
-        <DialogContent>
-          <Typography>
-            Camera QR scanning will be available here. For now, manually enter the QR code above.
-          </Typography>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setQrScanOpen(false)}>Close</Button>
-        </DialogActions>
-      </Dialog>
-
-      <QRScanner 
-        open={qrScanOpen} 
-        onClose={() => setQrScanOpen(false)}
+      <BarcodeScanner 
+        open={barcodeScanOpen} 
+        onClose={() => setBarcodeScanOpen(false)}
         onScan={(code) => {
-          addToCart(code)
-          setQrScanOpen(false)
+          addToCartByBarcode(code)
+          setBarcodeScanOpen(false)
         }}
       />
     </Box>

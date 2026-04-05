@@ -6,7 +6,7 @@ import {
 } from '@mui/material'
 import {
   Menu as MenuIcon, Dashboard, Business, Category, Inventory,
-  QrCode, Receipt, AccountBalance, Assessment, Logout, History, ReceiptLong, CardGiftcard
+  QrCode2 as BarcodeIcon, Receipt, AccountBalance, Assessment, Logout, History, ReceiptLong, CardGiftcard
 } from '@mui/icons-material'
 import { useAuth } from '../context/AuthContext'
 import BusinessSelector from './BusinessSelector'
@@ -26,7 +26,7 @@ const Layout = ({ children }) => {
     { text: 'Businesses', icon: <Business />, path: '/businesses' },
     { text: 'Categories', icon: <Category />, path: '/categories' },
     { text: 'Items', icon: <Inventory />, path: '/items' },
-    { text: 'Images', icon: <QrCode />, path: '/images' },
+    { text: 'Barcodes', icon: <BarcodeIcon />, path: '/barcodes' },
     { text: 'Gift Boxes', icon: <CardGiftcard />, path: '/gift-boxes' },
     { text: 'Stock History', icon: <History />, path: '/stock-history' },
     { text: 'Billing', icon: <Receipt />, path: '/billing' },

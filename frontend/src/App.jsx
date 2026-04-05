@@ -8,7 +8,7 @@ import Dashboard from './pages/Dashboard'
 import Businesses from './pages/Businesses'
 import Categories from './pages/Categories'
 import Items from './pages/Items'
-import Images from './pages/Images'
+import Barcodes from './pages/Barcodes'
 import GiftBoxes from './pages/GiftBoxes'
 import StockHistory from './pages/StockHistory'
 import Billing from './pages/Billing'
@@ -69,11 +69,11 @@ const AppRoutes = () => {
           </BusinessProvider>
         </ProtectedRoute>
       } />
-      <Route path="/images" element={
+      <Route path="/barcodes" element={
         <ProtectedRoute>
           <BusinessProvider>
             <Layout>
-              <Images />
+              <Barcodes />
             </Layout>
           </BusinessProvider>
         </ProtectedRoute>
