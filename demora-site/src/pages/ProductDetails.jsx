@@ -83,20 +83,20 @@ export default function ProductDetails() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Back Button */}
         <button
           onClick={() => navigate('/shop')}
-          className="flex items-center gap-2 text-black hover:text-gray-600 transition mb-8"
+          className="flex items-center gap-2 text-black hover:text-gray-600 transition mb-6 sm:mb-8"
         >
           <ArrowLeft size={20} />
           Back to Shop
         </button>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12">
           {/* Product Image */}
           <div>
-            <div className="bg-gray-100 rounded-lg overflow-hidden h-96 md:h-full flex items-center justify-center">
+            <div className="bg-gray-100 rounded-lg overflow-hidden h-64 sm:h-96 lg:h-full flex items-center justify-center">
               {product.images && product.images.length > 0 ? (
                 <img
                   src={product.images[0]}
@@ -111,7 +111,7 @@ export default function ProductDetails() {
 
           {/* Product Info */}
           <div>
-            <h1 className="text-4xl font-bold text-black mb-4">
+            <h1 className="text-3xl sm:text-4xl font-bold text-black mb-4">
               {product.itemName}
             </h1>
 
@@ -119,14 +119,14 @@ export default function ProductDetails() {
               Category: {product.category?.categoryName}
             </p>
 
-            <div className="mb-8">
-              <p className="text-4xl font-bold text-black">
+            <div className="mb-6 sm:mb-8">
+              <p className="text-3xl sm:text-4xl font-bold text-black">
                 {formatPrice(product.sellingPrice)}
               </p>
             </div>
 
             {/* Stock Status */}
-            <div className="mb-8">
+            <div className="mb-6 sm:mb-8">
               {isOutOfStock ? (
                 <p className="text-red-600 font-semibold text-lg">Out of Stock</p>
               ) : product.totalStock < 5 ? (
@@ -140,7 +140,7 @@ export default function ProductDetails() {
 
             {/* Quantity Selector */}
             {!isOutOfStock && (
-              <div className="mb-8">
+              <div className="mb-6 sm:mb-8">
                 <label className="block text-sm font-semibold text-black mb-2">
                   Quantity
                 </label>
@@ -170,7 +170,7 @@ export default function ProductDetails() {
             <button
               onClick={handleAddToCart}
               disabled={isOutOfStock}
-              className={`w-full py-4 rounded-lg font-semibold text-lg flex items-center justify-center gap-2 transition ${
+              className={`w-full py-3 sm:py-4 rounded-lg font-semibold text-base sm:text-lg flex items-center justify-center gap-2 transition ${
                 isOutOfStock
                   ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
                   : 'bg-black text-white hover:bg-gray-800'

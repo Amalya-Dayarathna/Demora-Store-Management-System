@@ -219,9 +219,9 @@ const Items = () => {
   }
 
   return (
-    <Box>
+    <Box sx={{ px: { xs: 0, sm: 0 } }}>
       <Grid container spacing={2} sx={{ mb: 3 }}>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={6} md={4}>
           <TextField
             label="Search items or categories"
             variant="outlined"
@@ -233,7 +233,7 @@ const Items = () => {
             }}
           />
         </Grid>
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} sm={6} md={4}>
           <FormControl fullWidth>
             <InputLabel>Filter by Category</InputLabel>
             <Select
@@ -251,8 +251,8 @@ const Items = () => {
           </FormControl>
         </Grid>
       </Grid>
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-        <Typography variant="h4">Items - {selectedBusiness.name}</Typography>
+      <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, mb: 3, gap: { xs: 2, sm: 0 } }}>
+        <Typography variant="h4" sx={{ fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>Items - {selectedBusiness.name}</Typography>
         <Button
           variant="contained"
           startIcon={<Add />}
@@ -262,19 +262,19 @@ const Items = () => {
         </Button>
       </Box>
 
-      <TableContainer component={Paper}>
-        <Table>
+      <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+        <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell>Item Name</TableCell>
-              <TableCell>Category</TableCell>
-              <TableCell>Base Ref Code</TableCell>
-              <TableCell>Cost Price (LKR)</TableCell>
-              <TableCell>Cost Price Code</TableCell>
-              <TableCell>Selling Price (LKR)</TableCell>
-              <TableCell>Total Stock</TableCell>
-              <TableCell>Variants & Tags</TableCell>
-              <TableCell>Actions</TableCell>
+              <TableCell sx={{ minWidth: 120 }}>Item Name</TableCell>
+              <TableCell sx={{ minWidth: 100 }}>Category</TableCell>
+              <TableCell sx={{ minWidth: 100 }}>Base Ref Code</TableCell>
+              <TableCell sx={{ minWidth: 100 }}>Cost Price (LKR)</TableCell>
+              <TableCell sx={{ minWidth: 100 }}>Cost Price Code</TableCell>
+              <TableCell sx={{ minWidth: 100 }}>Selling Price (LKR)</TableCell>
+              <TableCell sx={{ minWidth: 80 }}>Total Stock</TableCell>
+              <TableCell sx={{ minWidth: 150 }}>Variants & Tags</TableCell>
+              <TableCell sx={{ minWidth: 150 }}>Actions</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -341,7 +341,7 @@ const Items = () => {
         </Table>
       </TableContainer>
 
-      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
+      <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth fullScreen={window.innerWidth < 600}>
         <DialogTitle>
           {editingItem ? 'Edit Item' : 'Add Item'}
         </DialogTitle>
@@ -524,7 +524,7 @@ const Items = () => {
       </Dialog>
 
       {/* Barcode Dialog */}
-      <Dialog open={barcodeOpen} onClose={() => setBarcodeOpen(false)} maxWidth="md" fullWidth>
+      <Dialog open={barcodeOpen} onClose={() => setBarcodeOpen(false)} maxWidth="md" fullWidth fullScreen={window.innerWidth < 600}>
         <DialogTitle>Barcodes - {selectedItem?.itemName}</DialogTitle>
         <DialogContent>
           <Box sx={{ py: 2 }}>

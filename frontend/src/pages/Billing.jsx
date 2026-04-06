@@ -332,18 +332,18 @@ const Billing = () => {
   }
 
   return (
-    <Box>
-      <Typography variant="h4" gutterBottom>
+    <Box sx={{ px: { xs: 0, sm: 0 } }}>
+      <Typography variant="h4" gutterBottom sx={{ fontSize: { xs: '1.75rem', sm: '2.125rem' } }}>
         Billing - {selectedBusiness.name}
       </Typography>
 
       {error && <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>}
 
       <Grid container spacing={3}>
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 2, mb: 2 }}>
+        <Grid item xs={12} lg={8}>
+          <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: 2 }}>
             <Grid container spacing={2}>
-              <Grid item xs={12} md={8}>
+              <Grid item xs={12} sm={8}>
                 <TextField
                   label="Scan/Enter Barcode"
                   value={barcodeInput}
@@ -364,7 +364,7 @@ const Billing = () => {
                   }}
                 />
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} sm={4}>
                 <Button
                   variant="contained"
                   startIcon={<BarcodeIcon />}
@@ -378,7 +378,7 @@ const Billing = () => {
             </Grid>
           </Paper>
 
-          <Paper sx={{ p: 2, mb: 2 }}>
+          <Paper sx={{ p: { xs: 1.5, sm: 2 }, mb: 2 }}>
             <Typography variant="subtitle2" gutterBottom>Or select from list:</Typography>
             <Autocomplete
               options={[
@@ -401,8 +401,8 @@ const Billing = () => {
             />
           </Paper>
 
-          <TableContainer component={Paper}>
-            <Table>
+          <TableContainer component={Paper} sx={{ overflowX: 'auto' }}>
+            <Table size="small">
               <TableHead>
                 <TableRow>
                   <TableCell>Item</TableCell>
@@ -416,8 +416,8 @@ const Billing = () => {
               <TableBody>
                 {cart.map((item) => (
                   <TableRow key={item.variantId}>
-                    <TableCell>{item.variant.item.itemName}</TableCell>
-                    <TableCell>{item.variant.variantCode}</TableCell>
+                    <TableCell sx={{ minWidth: { xs: 120, sm: 'auto' } }}>{item.variant.item.itemName}</TableCell>
+                    <TableCell sx={{ minWidth: { xs: 100, sm: 'auto' } }}>{item.variant.variantCode}</TableCell>
                     <TableCell>{formatCurrency(item.price)}</TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -453,9 +453,9 @@ const Billing = () => {
           </TableContainer>
         </Grid>
 
-        <Grid item xs={12} md={4}>
+        <Grid item xs={12} lg={4}>
           <Card>
-            <CardContent>
+            <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
               <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                 <Typography variant="h6">
                   Customer Information
@@ -581,10 +581,10 @@ const Billing = () => {
 
       {/* Bill Summary */}
       {showBillSummary && createdBill && (
-        <Paper sx={{ mt: 3, p: 3 }}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-            <Typography variant="h5">Bill Created Successfully!</Typography>
-            <Box sx={{ display: 'flex', gap: 1 }}>
+        <Paper sx={{ mt: 3, p: { xs: 2, sm: 3 } }}>
+          <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, mb: 2, gap: { xs: 2, sm: 0 } }}>
+            <Typography variant="h5" sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }}>Bill Created Successfully!</Typography>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               <Button
                 variant="outlined"
                 startIcon={<Print />}
@@ -608,7 +608,7 @@ const Billing = () => {
           </Box>
           
           <Grid container spacing={2}>
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} sm={6}>
               <Typography variant="h6" gutterBottom>Bill Details</Typography>
               <Typography><strong>Bill Number:</strong> {createdBill.billNumber}</Typography>
               <Typography><strong>Date:</strong> {new Date(createdBill.createdAt).toLocaleDateString()}</Typography>
@@ -630,7 +630,7 @@ const Billing = () => {
               )}
             </Grid>
             
-            <Grid item xs={12} md={6}>
+            <Grid item xs={12} sm={6}>
               <Typography variant="h6" gutterBottom>Amount Summary</Typography>
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                 <Typography>Subtotal:</Typography>
@@ -656,8 +656,8 @@ const Billing = () => {
             </Grid>
           </Grid>
           
-          <Typography variant="h6" sx={{ mt: 2, mb: 1 }}>Items</Typography>
-          <TableContainer>
+          <Typography variant="h6" sx={{ mt: 2, mb: 1, fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>Items</Typography>
+          <TableContainer sx={{ overflowX: 'auto' }}>
             <Table size="small">
               <TableHead>
                 <TableRow>

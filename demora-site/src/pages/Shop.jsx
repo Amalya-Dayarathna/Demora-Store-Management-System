@@ -72,9 +72,9 @@ export default function Shop() {
     <div className="min-h-screen bg-white">
       <PageHeader title="Shop" subtitle="Browse our complete collection" />
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         {/* Search Bar */}
-        <div className="mb-8">
+        <div className="mb-6 sm:mb-8">
           <div className="relative">
             <Search className="absolute left-3 top-3 text-gray-400" size={20} />
             <input
@@ -87,10 +87,10 @@ export default function Shop() {
           </div>
         </div>
 
-        <div className="flex flex-col lg:flex-row gap-8">
+        <div className="flex flex-col lg:flex-row gap-6 sm:gap-8">
           {/* Sidebar - Categories */}
           <div className="lg:w-48 flex-shrink-0">
-            <div className="bg-gray-50 p-6 rounded-lg">
+            <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
               <h3 className="font-bold text-black mb-4">Categories</h3>
               <div className="space-y-2">
                 <button
@@ -136,11 +136,11 @@ export default function Shop() {
               </div>
             ) : (
               <>
-                <p className="text-sm text-gray-600 mb-6">
+                <p className="text-sm text-gray-600 mb-4 sm:mb-6">
                   Showing {filteredProducts.length} product
                   {filteredProducts.length !== 1 ? 's' : ''}
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                   {filteredProducts.map((product) => (
                     <ProductCard key={product.id} product={product} />
                   ))}

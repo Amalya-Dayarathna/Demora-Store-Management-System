@@ -30,16 +30,16 @@ const Login = () => {
   }
 
   return (
-    <Container component="main" maxWidth="xs">
+    <Container component="main" maxWidth="xs" sx={{ px: { xs: 2, sm: 3 } }}>
       <Box
         sx={{
-          marginTop: 8,
+          marginTop: { xs: 4, sm: 8 },
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
         }}
       >
-        <Paper elevation={3} sx={{ padding: 4, width: '100%' }}>
+        <Paper elevation={3} sx={{ padding: { xs: 3, sm: 4 }, width: '100%' }}>
           <Typography component="h1" variant="h4" align="center" gutterBottom>
             DEMORA
           </Typography>

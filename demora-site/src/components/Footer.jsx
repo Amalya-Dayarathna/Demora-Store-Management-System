@@ -4,7 +4,17 @@ export default function Footer() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div>
-            <h3 className="text-xl font-bold mb-4">DEMORA</h3>
+            <div className="flex items-center gap-2 mb-4">
+              <img 
+                src="/demorawhite.png" 
+                alt="Demora" 
+                className="h-16 w-auto"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                }}
+              />
+              <h3 className="text-xl font-bold">DEMORA</h3>
+            </div>
             <p className="text-gray-400">Premium quality products for modern living.</p>
           </div>
           <div>

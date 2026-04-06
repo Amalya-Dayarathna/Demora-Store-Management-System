@@ -13,9 +13,9 @@ export default function Navbar() {
         <div className="flex justify-between items-center h-16">
           <Link to="/" className="flex items-center gap-2">
             <img 
-              src="/images/demorawhite.png" 
+              src="/demorawhite.png" 
               alt="Demora" 
-              className="h-8 w-auto"
+              className="h-12 w-auto"
               onError={(e) => {
                 e.target.style.display = 'none';
               }}

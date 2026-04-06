@@ -126,10 +126,10 @@ export default function Checkout() {
   if (cart.length === 0) {
     return (
       <div className="min-h-screen bg-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           <button
             onClick={() => navigate('/cart')}
-            className="flex items-center gap-2 text-black hover:text-gray-600 transition mb-8"
+            className="flex items-center gap-2 text-black hover:text-gray-600 transition mb-6 sm:mb-8"
           >
             <ArrowLeft size={20} />
             Back to Cart
@@ -147,16 +147,16 @@ export default function Checkout() {
 
   return (
     <div className="min-h-screen bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <button
           onClick={() => navigate('/cart')}
-          className="flex items-center gap-2 text-black hover:text-gray-600 transition mb-8"
+          className="flex items-center gap-2 text-black hover:text-gray-600 transition mb-6 sm:mb-8"
         >
           <ArrowLeft size={20} />
           Back to Cart
         </button>
 
-        <h1 className="text-4xl font-bold text-black mb-8">Checkout</h1>
+        <h1 className="text-3xl sm:text-4xl font-bold text-black mb-6 sm:mb-8">Checkout</h1>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Checkout Form */}
@@ -169,7 +169,7 @@ export default function Checkout() {
               )}
 
               {/* Customer Details */}
-              <div className="bg-gray-50 p-6 rounded-lg">
+              <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
                 <h2 className="text-xl font-bold text-black mb-4">
                   Delivery Details
                 </h2>
@@ -219,7 +219,7 @@ export default function Checkout() {
               </div>
 
               {/* Additional Costs */}
-              <div className="bg-gray-50 p-6 rounded-lg">
+              <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
                 <h2 className="text-xl font-bold text-black mb-4">
                   Additional Costs
                 </h2>
@@ -257,7 +257,7 @@ export default function Checkout() {
               </div>
 
               {/* Payment Method */}
-              <div className="bg-gray-50 p-6 rounded-lg">
+              <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
                 <h2 className="text-xl font-bold text-black mb-4">
                   Payment Method
                 </h2>
@@ -288,7 +288,7 @@ export default function Checkout() {
               </div>
 
               {/* Gift Option */}
-              <div className="bg-gray-50 p-6 rounded-lg">
+              <div className="bg-gray-50 p-4 sm:p-6 rounded-lg">
                 <label className="flex items-center gap-3 cursor-pointer mb-4">
                   <input
                     type="checkbox"
@@ -334,7 +334,7 @@ export default function Checkout() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full bg-black text-white py-4 rounded-lg font-semibold hover:bg-gray-800 transition disabled:bg-gray-400"
+                className="w-full bg-black text-white py-3 sm:py-4 rounded-lg font-semibold hover:bg-gray-800 transition disabled:bg-gray-400"
               >
                 {loading ? 'Processing...' : 'Place Order'}
               </button>
@@ -343,7 +343,7 @@ export default function Checkout() {
 
           {/* Order Summary */}
           <div className="lg:col-span-1">
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 sticky top-20">
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 sm:p-6 lg:sticky lg:top-20">
               <h2 className="text-xl font-bold text-black mb-6">Order Summary</h2>
 
               <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
