@@ -97,6 +97,9 @@ router.get('/:businessId/sales', async (req, res) => {
                   include: { category: true }
                 }
               }
+            },
+            item: {
+              include: { category: true }
             }
           }
         }
@@ -104,9 +107,20 @@ router.get('/:businessId/sales', async (req, res) => {
       orderBy: { createdAt: 'desc' }
     });
     
-    const totalSales = bills.reduce((sum, bill) => sum + bill.grandTotal, 0);
+    // Calculate total cost and profit
+    let totalCost = 0;
+    bills.forEach(bill => {
+      bill.billItems.forEach(billItem => {
+        totalCost += (billItem.costPrice || 0) * billItem.quantity;
+      });
+      totalCost += bill.packagingCost;
+    });
+    
+    // Total sales without delivery cost (subtotal + packaging)
+    const totalSalesWithoutDelivery = bills.reduce((sum, bill) => sum + bill.subtotal + bill.packagingCost, 0);
+    const totalProfit = totalSalesWithoutDelivery - totalCost;
+    
     const totalOrders = bills.length;
-    const avgOrderValue = totalOrders > 0 ? totalSales / totalOrders : 0;
     
     // Sales by status
     const statusCounts = bills.reduce((acc, bill) => {
@@ -115,9 +129,11 @@ router.get('/:businessId/sales', async (req, res) => {
     }, {});
     
     res.json({
-      totalSales,
+      totalSales: totalSalesWithoutDelivery,
       totalOrders,
-      avgOrderValue,
+      avgOrderValue: totalOrders > 0 ? totalSalesWithoutDelivery / totalOrders : 0,
+      totalCost,
+      totalProfit,
       statusCounts,
       bills
     });

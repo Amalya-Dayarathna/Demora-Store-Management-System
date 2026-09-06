@@ -25,7 +25,10 @@ const Items = () => {
   const [categoryFilter, setCategoryFilter] = useState('')
   const [stockData, setStockData] = useState({
     quantity: '',
-    operation: 'add'
+    operation: 'add',
+    variantUpdates: [],
+    newCostPrice: '',
+    newSellingPrice: ''
   })
   const [formData, setFormData] = useState({
     itemName: '',
@@ -167,7 +170,7 @@ const Items = () => {
   const addVariant = () => {
     setFormData({
       ...formData,
-      variants: [...formData.variants, { color: '', size: '', quantity: 0 }]
+      variants: [...formData.variants, { color: '', size: '', type: '', quantity: 0 }]
     })
   }
 
@@ -188,12 +191,34 @@ const Items = () => {
 
   const handleStockUpdate = async () => {
     try {
-      await axios.put(`/api/items/${selectedItem.id}/stock`, stockData)
-      await fetchItems()
-      setStockOpen(false)
-      setStockData({ quantity: '', operation: 'add' })
+      const requestData = {
+        operation: stockData.operation,
+        newCostPrice: stockData.newCostPrice ? parseFloat(stockData.newCostPrice) : null,
+        newSellingPrice: stockData.newSellingPrice ? parseFloat(stockData.newSellingPrice) : null
+      };
+      
+      if (selectedItem?.variants && selectedItem.variants.length > 0) {
+        requestData.variantUpdates = stockData.variantUpdates.filter(u => u.quantity > 0);
+        
+        if (requestData.variantUpdates.length === 0) {
+          alert('Please enter quantity for at least one variant');
+          return;
+        }
+      } else {
+        if (!stockData.quantity || stockData.quantity <= 0) {
+          alert('Please enter a valid quantity');
+          return;
+        }
+        requestData.quantity = parseInt(stockData.quantity);
+      }
+      
+      await axios.put(`/api/items/${selectedItem.id}/stock`, requestData);
+      await fetchItems();
+      setStockOpen(false);
+      setStockData({ quantity: '', operation: 'add', variantUpdates: [], newCostPrice: '', newSellingPrice: '' });
     } catch (error) {
-      console.error('Failed to update stock:', error)
+      console.error('Failed to update stock:', error);
+      alert(error.response?.data?.error || 'Failed to update stock');
     }
   }
 
@@ -291,13 +316,16 @@ const Items = () => {
                   <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                     {item.variants && item.variants.length > 0 && (
                       <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                        {item.variants.map((v, i) => (
-                          <Chip 
-                            key={i} 
-                            label={`${v.color || ''}${v.size ? ' ' + v.size : ''}: ${v.quantity}`}
-                            size="small"
-                          />
-                        ))}
+                        {item.variants.map((v, i) => {
+                          const variantLabel = [v.color, v.size, v.type].filter(Boolean).join(' / ');
+                          return (
+                            <Chip 
+                              key={i} 
+                              label={`${variantLabel}: ${v.quantity}`}
+                              size="small"
+                            />
+                          );
+                        })}
                       </Box>
                     )}
                     {item.tags && item.tags.length > 0 && (
@@ -322,8 +350,19 @@ const Items = () => {
                   </IconButton>
                   <IconButton
                     onClick={() => {
-                      setSelectedItem(item)
-                      setStockOpen(true)
+                      setSelectedItem(item);
+                      const variantUpdates = item.variants ? item.variants.map((v, index) => ({
+                        index,
+                        quantity: 0
+                      })) : [];
+                      setStockData({ 
+                        quantity: '', 
+                        operation: 'add', 
+                        variantUpdates,
+                        newCostPrice: '',
+                        newSellingPrice: ''
+                      });
+                      setStockOpen(true);
                     }}
                   >
                     <Inventory />
@@ -466,6 +505,13 @@ const Items = () => {
                   sx={{ flex: 1 }}
                 />
                 <TextField
+                  label="Type"
+                  size="small"
+                  value={variant.type}
+                  onChange={(e) => updateVariant(index, 'type', e.target.value)}
+                  sx={{ flex: 1 }}
+                />
+                <TextField
                   label="Quantity"
                   type="number"
                   size="small"
@@ -489,12 +535,20 @@ const Items = () => {
       </Dialog>
 
       {/* Stock Update Dialog */}
-      <Dialog open={stockOpen} onClose={() => setStockOpen(false)}>
+      <Dialog open={stockOpen} onClose={() => setStockOpen(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Update Stock - {selectedItem?.itemName}</DialogTitle>
         <DialogContent>
-          <Typography sx={{ mb: 2 }}>
-            Current Stock: {selectedItem?.stockQuantity || 0}
-          </Typography>
+          <Box sx={{ mb: 2 }}>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Current Total Stock: {selectedItem?.stockQuantity || 0}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Current Cost Price: {formatCurrency(selectedItem?.costPrice || 0)}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" gutterBottom>
+              Current Selling Price: {formatCurrency(selectedItem?.sellingPrice || 0)}
+            </Typography>
+          </Box>
           
           <FormControl fullWidth sx={{ mb: 2 }}>
             <InputLabel>Operation</InputLabel>
@@ -508,13 +562,77 @@ const Items = () => {
             </Select>
           </FormControl>
           
+          {selectedItem?.variants && selectedItem.variants.length > 0 ? (
+            <Box sx={{ mb: 2 }}>
+              <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
+                Update Stock by Variant:
+              </Typography>
+              {selectedItem.variants.map((variant, index) => {
+                const variantLabel = [variant.color && `Color: ${variant.color}`, variant.size && `Size: ${variant.size}`, variant.type && `Type: ${variant.type}`].filter(Boolean).join(' | ');
+                return (
+                <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid #ddd', borderRadius: 1 }}>
+                  <Typography variant="body2" gutterBottom>
+                    {variantLabel}
+                    {' - Current Stock: '}{variant.quantity}
+                  </Typography>
+                  <TextField
+                    label={`Quantity to ${stockData.operation === 'add' ? 'Add' : 'Remove'}`}
+                    type="number"
+                    fullWidth
+                    size="small"
+                    value={stockData.variantUpdates[index]?.quantity || 0}
+                    onChange={(e) => {
+                      const newVariantUpdates = [...stockData.variantUpdates];
+                      newVariantUpdates[index] = {
+                        index,
+                        quantity: parseInt(e.target.value) || 0
+                      };
+                      setStockData({ ...stockData, variantUpdates: newVariantUpdates });
+                    }}
+                    inputProps={{ min: 0 }}
+                  />
+                </Box>
+              );
+              })}
+            </Box>
+          ) : (
+            <TextField
+              label="Quantity"
+              type="number"
+              fullWidth
+              variant="outlined"
+              value={stockData.quantity}
+              onChange={(e) => setStockData({ ...stockData, quantity: e.target.value })}
+              sx={{ mb: 2 }}
+              inputProps={{ min: 0 }}
+            />
+          )}
+          
+          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mt: 3 }}>
+            Update Prices (Optional):
+          </Typography>
+          
           <TextField
-            label="Quantity"
+            label="New Cost Price (LKR)"
             type="number"
             fullWidth
             variant="outlined"
-            value={stockData.quantity}
-            onChange={(e) => setStockData({ ...stockData, quantity: e.target.value })}
+            value={stockData.newCostPrice}
+            onChange={(e) => setStockData({ ...stockData, newCostPrice: e.target.value })}
+            sx={{ mb: 2 }}
+            placeholder="Leave empty to keep current price"
+            inputProps={{ step: '0.01', min: 0 }}
+          />
+          
+          <TextField
+            label="New Selling Price (LKR)"
+            type="number"
+            fullWidth
+            variant="outlined"
+            value={stockData.newSellingPrice}
+            onChange={(e) => setStockData({ ...stockData, newSellingPrice: e.target.value })}
+            placeholder="Leave empty to keep current price"
+            inputProps={{ step: '0.01', min: 0 }}
           />
         </DialogContent>
         <DialogActions>
@@ -533,8 +651,14 @@ const Items = () => {
                 {/* Item Barcode */}
                 {selectedItem.barcode && (
                   <Box sx={{ mb: 3, p: 2, border: '1px solid #ddd', borderRadius: 1 }}>
-                    <Typography variant="subtitle2" gutterBottom>Item Barcode</Typography>
-                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                    <Box sx={{ textAlign: 'center', mb: 2 }}>
+                      <img 
+                        src="/images/demora.png" 
+                        alt="DEMORA" 
+                        style={{ maxWidth: '100px', height: 'auto', marginBottom: '10px' }}
+                      />
+                    </Box>
+                    <Typography variant="body2" color="text.secondary" gutterBottom sx={{ textAlign: 'center' }}>
                       {selectedItem.baseRefCode}
                     </Typography>
                     <Box sx={{ textAlign: 'center', my: 2 }}>
@@ -554,12 +678,19 @@ const Items = () => {
                 {selectedItem.variants && selectedItem.variants.length > 0 && (
                   <Box>
                     <Typography variant="subtitle1" gutterBottom>Inline Variant Barcodes</Typography>
-                    {selectedItem.variants.map((variant, index) => (
+                    {selectedItem.variants.map((variant, index) => {
+                      const variantLabel = [variant.color && `Color: ${variant.color}`, variant.size && `Size: ${variant.size}`, variant.type && `Type: ${variant.type}`].filter(Boolean).join(' | ');
+                      return (
                       <Box key={index} sx={{ mb: 2, p: 2, border: '1px solid #ddd', borderRadius: 1 }}>
-                        <Typography variant="body2" gutterBottom>
-                          {variant.color && `Color: ${variant.color}`}
-                          {variant.color && variant.size && ' | '}
-                          {variant.size && `Size: ${variant.size}`}
+                        <Box sx={{ textAlign: 'center', mb: 2 }}>
+                          <img 
+                            src="/images/demora.png" 
+                            alt="DEMORA" 
+                            style={{ maxWidth: '100px', height: 'auto', marginBottom: '10px' }}
+                          />
+                        </Box>
+                        <Typography variant="body2" color="text.secondary" gutterBottom sx={{ textAlign: 'center' }}>
+                          {variantLabel}
                           {' - Stock: '}{variant.quantity}
                         </Typography>
                         {variant.barcode && (
@@ -582,7 +713,8 @@ const Items = () => {
                           </Typography>
                         )}
                       </Box>
-                    ))}
+                    );
+                    })}
                   </Box>
                 )}
                 

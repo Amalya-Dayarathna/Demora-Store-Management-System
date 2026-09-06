@@ -235,17 +235,97 @@ router.get('/:id/qr-image', async (req, res) => {
   }
 });
 
-// Update item stock
+// Update item stock with variants and price changes
 router.put('/:id/stock', async (req, res) => {
   try {
     const { id } = req.params;
-    const { quantity, operation } = req.body;
+    const { quantity, operation, variantUpdates, newCostPrice, newSellingPrice } = req.body;
     
     const item = await prisma.item.findUnique({ where: { id } });
     if (!item) {
       return res.status(404).json({ error: 'Item not found' });
     }
     
+    // Handle variant-based stock update
+    if (variantUpdates && variantUpdates.length > 0) {
+      const currentVariants = item.variants || [];
+      let totalStockChange = 0;
+      
+      // Update each variant quantity
+      const updatedVariants = currentVariants.map((variant, index) => {
+        const update = variantUpdates.find(u => u.index === index);
+        if (update) {
+          const change = operation === 'add' ? parseInt(update.quantity) : -parseInt(update.quantity);
+          totalStockChange += change;
+          return {
+            ...variant,
+            quantity: variant.quantity + change
+          };
+        }
+        return variant;
+      });
+      
+      // Check for negative quantities
+      if (updatedVariants.some(v => v.quantity < 0)) {
+        return res.status(400).json({ error: 'Insufficient stock in one or more variants' });
+      }
+      
+      const newTotalStock = item.stockQuantity + totalStockChange;
+      
+      if (newTotalStock < 0) {
+        return res.status(400).json({ error: 'Insufficient stock' });
+      }
+      
+      // Prepare update data
+      const updateData = {
+        stockQuantity: newTotalStock,
+        variants: updatedVariants
+      };
+      
+      // Update prices if provided
+      if (newCostPrice !== undefined && newCostPrice !== null) {
+        updateData.costPrice = parseFloat(newCostPrice);
+        updateData.costPriceCode = generateCostPriceCode(Math.floor(parseFloat(newCostPrice)));
+      }
+      
+      if (newSellingPrice !== undefined && newSellingPrice !== null) {
+        updateData.sellingPrice = parseFloat(newSellingPrice);
+      }
+      
+      // Update item and record movements in transaction
+      const result = await prisma.$transaction(async (tx) => {
+        const updatedItem = await tx.item.update({
+          where: { id },
+          data: updateData,
+          include: { category: true }
+        });
+        
+        // Record stock movements for each variant
+        for (const update of variantUpdates) {
+          if (update.quantity > 0) {
+            const variant = currentVariants[update.index];
+            const variantLabel = `${variant.color || ''}${variant.size ? ' ' + variant.size : ''}`;
+            
+            await tx.stockMovement.create({
+              data: {
+                itemId: id,
+                movementType: operation === 'add' ? 'IN' : 'OUT',
+                quantity: parseInt(update.quantity),
+                reason: 'adjustment',
+                reference: `Variant: ${variantLabel}`,
+                businessId: item.businessId
+              }
+            });
+          }
+        }
+        
+        return updatedItem;
+      });
+      
+      return res.json(result);
+    }
+    
+    // Handle simple stock update (no variants)
     const quantityNum = parseInt(quantity);
     const newStock = operation === 'add' 
       ? item.stockQuantity + quantityNum
@@ -255,11 +335,24 @@ router.put('/:id/stock', async (req, res) => {
       return res.status(400).json({ error: 'Insufficient stock' });
     }
     
+    // Prepare update data
+    const updateData = { stockQuantity: newStock };
+    
+    // Update prices if provided
+    if (newCostPrice !== undefined && newCostPrice !== null) {
+      updateData.costPrice = parseFloat(newCostPrice);
+      updateData.costPriceCode = generateCostPriceCode(Math.floor(parseFloat(newCostPrice)));
+    }
+    
+    if (newSellingPrice !== undefined && newSellingPrice !== null) {
+      updateData.sellingPrice = parseFloat(newSellingPrice);
+    }
+    
     // Update stock and record movement in transaction
     const result = await prisma.$transaction(async (tx) => {
       const updatedItem = await tx.item.update({
         where: { id },
-        data: { stockQuantity: newStock },
+        data: updateData,
         include: { category: true }
       });
       

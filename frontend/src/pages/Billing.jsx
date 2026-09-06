@@ -56,10 +56,11 @@ const Billing = () => {
       itemsRes.data.forEach(item => {
         if (item.variants && item.variants.length > 0) {
           item.variants.forEach((v, index) => {
+            const variantParts = [v.color, v.size, v.type].filter(Boolean);
             inlineVariants.push({
               id: `${item.id}-${index}`,
-              variantCode: `${item.baseRefCode}-${v.color || ''}${v.size || ''}`,
-              attributes: { color: v.color, size: v.size },
+              variantCode: `${item.baseRefCode}-${variantParts.join('-')}`,
+              attributes: { color: v.color, size: v.size, type: v.type },
               stockQuantity: v.quantity,
               item: item,
               isInlineVariant: true,
@@ -274,8 +275,7 @@ const Billing = () => {
       </head>
       <body>
         <div class="header">
-          <h2>${selectedBusiness.name}</h2>
-          <h3>BILL</h3>
+          <img src="/images/demora.png" alt="DEMORA" style="max-width: 150px; height: auto; margin-bottom: 10px;" />
         </div>
         
         <div class="bill-info">
@@ -387,11 +387,16 @@ const Billing = () => {
                   type: 'item',
                   label: `${item.itemName} (${item.baseRefCode}) - Stock: ${item.stockQuantity}`
                 })),
-                ...variants.filter(variant => variant.stockQuantity > 0).map(variant => ({
-                  ...variant,
-                  type: 'variant',
-                  label: `${variant.item.itemName} - ${variant.variantCode} - Stock: ${variant.stockQuantity}`
-                }))
+                ...variants.filter(variant => variant.stockQuantity > 0).map(variant => {
+                  const variantLabel = [variant.attributes?.color, variant.attributes?.size, variant.attributes?.type]
+                    .filter(Boolean)
+                    .join(' / ');
+                  return {
+                    ...variant,
+                    type: 'variant',
+                    label: `${variant.item.itemName} - ${variantLabel || variant.variantCode} - Stock: ${variant.stockQuantity}`
+                  };
+                })
               ]}
               getOptionLabel={(option) => option.label}
               onChange={(event, value) => addToCartFromDropdown(value)}

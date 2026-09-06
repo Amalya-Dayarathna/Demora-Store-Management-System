@@ -123,6 +123,7 @@ router.post('/', async (req, res) => {
           variantIndex: parseInt(variantIndex),
           quantity: item.quantity,
           unitPrice: actualItem.sellingPrice,
+          costPrice: actualItem.costPrice,
           total,
           isInlineVariant: true
         });
@@ -143,6 +144,7 @@ router.post('/', async (req, res) => {
           variantId: item.variantId,
           quantity: item.quantity,
           unitPrice: actualItem.sellingPrice,
+          costPrice: actualItem.costPrice,
           total
         });
       } else {
@@ -159,6 +161,7 @@ router.post('/', async (req, res) => {
           variantId: item.variantId,
           quantity: item.quantity,
           unitPrice: variant.item.sellingPrice,
+          costPrice: variant.item.costPrice,
           total
         });
       }
@@ -217,6 +220,7 @@ router.post('/', async (req, res) => {
               itemId: itemData.itemId,
               quantity: itemData.quantity,
               unitPrice: itemData.unitPrice,
+              costPrice: itemData.costPrice,
               total: itemData.total
             }
           });
@@ -244,6 +248,7 @@ router.post('/', async (req, res) => {
               itemId: itemId,
               quantity: itemData.quantity,
               unitPrice: itemData.unitPrice,
+              costPrice: itemData.costPrice,
               total: itemData.total
             }
           });
@@ -277,6 +282,7 @@ router.post('/', async (req, res) => {
               variantId: itemData.variantId,
               quantity: itemData.quantity,
               unitPrice: itemData.unitPrice,
+              costPrice: itemData.costPrice,
               total: itemData.total
             }
           });

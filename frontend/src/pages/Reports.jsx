@@ -4,6 +4,7 @@ import {
   TableCell, TableContainer, TableHead, TableRow, Tabs, Tab,
   Grid, Card, CardContent, Chip
 } from '@mui/material'
+import { Download } from '@mui/icons-material'
 import { useBusiness } from '../context/BusinessContext'
 import { formatCurrency } from '../utils/currency'
 import axios from 'axios'
@@ -51,6 +52,48 @@ const Reports = () => {
     if (quantity === 0) return 'error'
     if (quantity <= 5) return 'warning'
     return 'success'
+  }
+
+  const downloadReport = (reportType) => {
+    let content = ''
+    let filename = ''
+
+    if (reportType === 'inventory' && inventoryReport) {
+      filename = `inventory-report-${new Date().toISOString().split('T')[0]}.csv`
+      content = 'Item,Variant Code,Color,Size,Type,Stock,Status\n'
+      inventoryReport.variants.forEach(variant => {
+        const status = variant.stockQuantity === 0 ? 'Out of Stock' : variant.stockQuantity <= 5 ? 'Low Stock' : 'In Stock'
+        content += `"${variant.item.itemName}","${variant.variantCode}","${variant.attributes.color || ''}","${variant.attributes.size || ''}","${variant.attributes.type || ''}",${variant.stockQuantity},"${status}"\n`
+      })
+    } else if (reportType === 'sales' && salesReport) {
+      filename = `sales-report-${new Date().toISOString().split('T')[0]}.csv`
+      content = 'Bill Number,Order ID,Date,Customer,Sales (excl. Delivery),Status\n'
+      salesReport.bills.forEach(bill => {
+        content += `"${bill.billNumber}","${bill.orderId || '-'}","${new Date(bill.createdAt).toLocaleDateString()}","${bill.customerName || 'N/A'}",${(bill.subtotal + bill.packagingCost).toFixed(2)},"${bill.status}"\n`
+      })
+      content += `\nSummary\n`
+      content += `Total Sales (excl. Delivery),${(salesReport.totalSales || 0).toFixed(2)}\n`
+      content += `Total Cost,${(salesReport.totalCost || 0).toFixed(2)}\n`
+      content += `Total Profit,${(salesReport.totalProfit || 0).toFixed(2)}\n`
+      content += `Total Orders,${salesReport.totalOrders}\n`
+    } else if (reportType === 'cashflow' && cashflowReport) {
+      filename = `cashflow-report-${new Date().toISOString().split('T')[0]}.csv`
+      content = 'Summary\n'
+      content += `Total Income,${(cashflowReport.summary.totalIncome || 0).toFixed(2)}\n`
+      content += `Total Expenses,${(cashflowReport.summary.totalExpenses || 0).toFixed(2)}\n`
+      content += `Net Cashflow,${(cashflowReport.summary.netCashflow || 0).toFixed(2)}\n`
+      content += `Remaining Capital,${(cashflowReport.summary.remainingCapital || 0).toFixed(2)}\n`
+    }
+
+    if (content) {
+      const blob = new Blob([content], { type: 'text/csv' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      a.click()
+      URL.revokeObjectURL(url)
+    }
   }
 
   if (!selectedBusiness) {
@@ -109,6 +152,11 @@ const Reports = () => {
 
         {tabValue === 0 && inventoryReport && (
           <Box sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+              <Button variant="outlined" startIcon={<Download />} onClick={() => downloadReport('inventory')}>
+                Download Report
+              </Button>
+            </Box>
             <Grid container spacing={3} sx={{ mb: 3 }}>
               <Grid item xs={12} md={3}>
                 <Card>
@@ -223,28 +271,41 @@ const Reports = () => {
 
         {tabValue === 1 && salesReport && (
           <Box sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+              <Button variant="outlined" startIcon={<Download />} onClick={() => downloadReport('sales')}>
+                Download Report
+              </Button>
+            </Box>
             <Grid container spacing={3} sx={{ mb: 3 }}>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={3}>
                 <Card>
                   <CardContent>
-                    <Typography color="textSecondary" gutterBottom>Total Sales</Typography>
+                    <Typography color="textSecondary" gutterBottom>Total Sales (excl. Delivery)</Typography>
                     <Typography variant="h4">{formatCurrency(salesReport.totalSales || 0)}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
-              <Grid item xs={12} md={4}>
+              <Grid item xs={12} md={3}>
+                <Card>
+                  <CardContent>
+                    <Typography color="textSecondary" gutterBottom>Total Cost</Typography>
+                    <Typography variant="h4" color="error.main">{formatCurrency(salesReport.totalCost || 0)}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} md={3}>
+                <Card>
+                  <CardContent>
+                    <Typography color="textSecondary" gutterBottom>Total Profit</Typography>
+                    <Typography variant="h4" color="success.main">{formatCurrency(salesReport.totalProfit || 0)}</Typography>
+                  </CardContent>
+                </Card>
+              </Grid>
+              <Grid item xs={12} md={3}>
                 <Card>
                   <CardContent>
                     <Typography color="textSecondary" gutterBottom>Total Orders</Typography>
                     <Typography variant="h4">{salesReport.totalOrders}</Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-              <Grid item xs={12} md={4}>
-                <Card>
-                  <CardContent>
-                    <Typography color="textSecondary" gutterBottom>Avg Order Value</Typography>
-                    <Typography variant="h4">{formatCurrency(salesReport.avgOrderValue || 0)}</Typography>
                   </CardContent>
                 </Card>
               </Grid>
@@ -255,9 +316,10 @@ const Reports = () => {
                 <TableHead>
                   <TableRow>
                     <TableCell>Bill Number</TableCell>
+                    <TableCell>Order ID</TableCell>
                     <TableCell>Date</TableCell>
                     <TableCell>Customer</TableCell>
-                    <TableCell>Total</TableCell>
+                    <TableCell>Sales (excl. Delivery)</TableCell>
                     <TableCell>Status</TableCell>
                   </TableRow>
                 </TableHead>
@@ -265,9 +327,10 @@ const Reports = () => {
                   {salesReport.bills.map((bill) => (
                     <TableRow key={bill.id}>
                       <TableCell>{bill.billNumber}</TableCell>
+                      <TableCell>{bill.orderId || '-'}</TableCell>
                       <TableCell>{new Date(bill.createdAt).toLocaleDateString()}</TableCell>
                       <TableCell>{bill.customerName || 'N/A'}</TableCell>
-                      <TableCell>{formatCurrency(bill.grandTotal)}</TableCell>
+                      <TableCell>{formatCurrency(bill.subtotal + bill.packagingCost)}</TableCell>
                       <TableCell>
                         <Chip label={bill.status} size="small" />
                       </TableCell>
@@ -281,6 +344,11 @@ const Reports = () => {
 
         {tabValue === 2 && cashflowReport && (
           <Box sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
+              <Button variant="outlined" startIcon={<Download />} onClick={() => downloadReport('cashflow')}>
+                Download Report
+              </Button>
+            </Box>
             <Grid container spacing={3} sx={{ mb: 3 }}>
               <Grid item xs={12} md={3}>
                 <Card>

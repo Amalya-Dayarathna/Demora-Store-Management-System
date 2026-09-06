@@ -5,6 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model Business {
@@ -109,6 +110,7 @@ model BillItem {
   quantity  Int
   unitPrice Float
   total     Float
+  costPrice Float    @default(0) @map("cost_price")
   itemId    String?
   variantId String?
   bill      Bill     @relation(fields: [billId], references: [id], onDelete: Cascade)
